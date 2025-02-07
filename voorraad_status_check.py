@@ -75,7 +75,10 @@ if uploaded_stock and uploaded_website:
         st.stop()
     
     # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
-    if ('Rasomschrijving' not in stock_df.columns and 'Ras omschrijving' not in stock_df.columns) or ('Rasomschrijving' not in website_df.columns and 'Ras omschrijving' not in website_df.columns):
+    valid_stock_column = 'Rasomschrijving' if 'Rasomschrijving' in stock_df.columns else 'Ras omschrijving' if 'Ras omschrijving' in stock_df.columns else None
+    valid_website_column = 'Rasomschrijving' if 'Rasomschrijving' in website_df.columns else 'Ras omschrijving' if 'Ras omschrijving' in website_df.columns else None
+    
+    if not valid_stock_column or not valid_website_column:
         st.error("De kolom 'Rasomschrijving' ontbreekt in een van de geüploade bestanden!")
         st.stop()
     
