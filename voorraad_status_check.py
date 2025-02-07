@@ -7,7 +7,7 @@ def load_data(file, sheet_name=None):
     try:
         df = pd.read_excel(file, sheet_name=sheet_name)
         if isinstance(df, dict):
-            return df  # Voor het geval van meerdere sheets
+            return df  # Voor meerdere sheets
         elif isinstance(df, pd.DataFrame):
             return df  # Enkel blad wordt ingelezen als DataFrame
         else:
@@ -19,38 +19,26 @@ def load_data(file, sheet_name=None):
 
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
-    # Controleer of de bestanden correct zijn geladen
-    if stock_df is None or not isinstance(stock_df, pd.DataFrame):
-        st.error("Fout: 'stock_df' is geen geldige DataFrame of ontbreekt.")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-    if website_df is None or not isinstance(website_df, pd.DataFrame):
-        st.error("Fout: 'website_df' is geen geldige DataFrame of ontbreekt.")
+    if stock_df is None or website_df is None:
+        st.error("Fout: Een of beide dataframes ontbreken.")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     
     # Kolomnamen corrigeren
     stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving'})
     website_df = website_df.rename(columns={'Ras omschrijving': 'Rasomschrijving'})
-
+    
     # Controleer of de verwachte kolommen aanwezig zijn
     required_columns_stock = {'Stiercode NL / KI code', 'Beschikbare voorraad', 'Rasomschrijving'}
     required_columns_website = {'Stiercode NL / KI code', 'Rasomschrijving', 'Status'}
 
-    if not required_columns_stock.issubset(stock_df.columns):
-        st.error("Het voorraadbestand mist vereiste kolommen! Controleer de structuur.")
+    if not required_columns_stock.issubset(stock_df.columns) or not required_columns_website.issubset(website_df.columns):
+        st.error("Fout: Vereiste kolommen ontbreken in de bestanden!")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     
-    if not required_columns_website.issubset(website_df.columns):
-        st.error("Het webshopbestand mist vereiste kolommen! Controleer de structuur.")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-    # Merge de dataframes op 'Stiercode NL / KI code'
+    # Merge de dataframes
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
-
-    # Zorg dat 'Beschikbare voorraad' numeriek is en negatieve waarden op 0 zet
     merged_df['Beschikbare voorraad'] = pd.to_numeric(merged_df.get('Beschikbare voorraad', 0), errors='coerce').fillna(0).astype(int)
-    merged_df['Beschikbare voorraad'] = merged_df['Beschikbare voorraad'].clip(lower=0)
-
-    # Lijsten om producten te verwijderen/toe te voegen
+    
     to_remove, to_add, ignored = [], [], []
 
     for _, row in merged_df.iterrows():
@@ -74,7 +62,6 @@ st.title("Voorraad en Website Status Beheer")
 uploaded_stock = st.file_uploader("Upload Voorraad Rapport", type=["xlsx"])
 uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx"])
 
-st.sidebar.header("Voorraad Drempels Per Ras")
 threshold_dict = {}
 
 if uploaded_stock and uploaded_website:
@@ -91,7 +78,7 @@ if uploaded_stock and uploaded_website:
         website_rassen = website_df.get('Rasomschrijving', pd.Series()).dropna().unique().tolist()
         ras_options = sorted(set(stock_rassen + website_rassen))
         
-        with st.sidebar.expander("Drempelwaarden instellen", expanded=False):
+        with st.sidebar.expander("Drempelwaarden instellen", expanded=True):
             for ras in ras_options:
                 threshold_dict[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=10, key=f"{ras}")
 
@@ -127,4 +114,3 @@ if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
             file_name="voorraad_status_update.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
