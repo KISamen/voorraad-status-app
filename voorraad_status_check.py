@@ -8,30 +8,34 @@ def load_data(file):
 
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
-    merged_df = pd.merge(website_df, stock_df, left_on='Levensnummer', right_on='Nr.', how='left')
+    # Corrigeer de kolomnamen om de juiste match te krijgen
+    stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving'})
+    
+    merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
     
     # Zorg ervoor dat de kolomnaam correct overeenkomt met die in het Excel-bestand
     if 'Beschikbare voorraad' not in merged_df.columns:
-        merged_df['Beschikbare voorraad'] = stock_df['Beschikbare voorraad'].fillna(0)  # Kolom uit voorraadbestand
+        merged_df['Beschikbare voorraad'] = stock_df['Beschikbare voorraad'].fillna(0)
     
-    merged_df['Beschikbare voorraad'] = merged_df['Beschikbare voorraad'].fillna(0)  # Voorkom NaN waarden
-
+    # Zorg ervoor dat de waarden correct worden gelezen als numeriek
+    merged_df['Beschikbare voorraad'] = pd.to_numeric(merged_df['Beschikbare voorraad'], errors='coerce').fillna(0).astype(int)
+    
     to_remove = []
     to_add = []
     for index, row in merged_df.iterrows():
-        if 'Rasomschrijving' in row and 'Nr.' in row:  # Controleer of de kolommen bestaan
+        if 'Rasomschrijving' in row and 'Stiercode NL / KI code' in row:  # Controleer of de kolommen bestaan
             ras = row['Rasomschrijving']
-            status = row['Status'] if 'Status' in row else 'Onbekend'
+            status = row['Status'].strip().lower() if 'Status' in row else 'onbekend'
             for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
                 drempel = threshold_dict.get((ras, land), 0)  # Drempel instelbaar
                 
-                if row['Beschikbare voorraad'] < drempel and row.get(land, 'Nee') == 'Ja' and status == 'actief':
+                if row['Beschikbare voorraad'] < drempel and status == 'active':
                     to_remove.append(row)
-                elif row['Beschikbare voorraad'] >= drempel and row.get(land, 'Nee') == 'Ja' and status in ['archive', 'concept']:
+                elif row['Beschikbare voorraad'] >= drempel and status in ['archive', 'concept']:
                     to_add.append(row)
     
-    remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Nr.', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
-    add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Nr.', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
+    remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
+    add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     
     return remove_df, add_df
 
@@ -51,7 +55,7 @@ if uploaded_stock and uploaded_website:
     website_df = load_data(uploaded_website)
     
     # Extract unieke rassen uit de bestanden
-    stock_rassen = stock_df['Ras omschrijving'].dropna().unique().tolist()
+    stock_rassen = stock_df['Rasomschrijving'].dropna().unique().tolist()
     website_rassen = website_df['Rasomschrijving'].dropna().unique().tolist()
     ras_options = sorted(set(stock_rassen + website_rassen))
     
