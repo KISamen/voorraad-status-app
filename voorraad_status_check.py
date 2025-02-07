@@ -75,8 +75,7 @@ if uploaded_stock and uploaded_website:
     else:
         st.error("Het tabblad 'Stieren' ontbreekt in het geüploade bestand!")
         st.stop()
-    if isinstance(website_df, dict):
-        website_df = website_df['Stieren']
+    
     
     # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
     if 'Rasomschrijving' not in stock_df.columns or 'Rasomschrijving' not in website_df.columns:
