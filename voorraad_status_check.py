@@ -19,8 +19,8 @@ def filter_products(stock_df, website_df, threshold_dict):
     to_remove = []
     to_add = []
     for index, row in merged_df.iterrows():
-        if 'Ras omschrijving' in row and 'Nr.' in row:  # Controleer of de kolommen bestaan
-            ras = row['Ras omschrijving']
+        if 'Rasomschrijving' in row and 'Nr.' in row:  # Controleer of de kolommen bestaan
+            ras = row['Rasomschrijving']
             status = row['Status'] if 'Status' in row else 'Onbekend'
             for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
                 drempel = threshold_dict.get((ras, land), 0)  # Drempel instelbaar
@@ -30,8 +30,8 @@ def filter_products(stock_df, website_df, threshold_dict):
                 elif row['Beschikbare voorraad'] >= drempel and row.get(land, 'Nee') == 'Ja' and status in ['archive', 'concept']:
                     to_add.append(row)
     
-    remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Nr.', 'Omschrijving', 'Beschikbare voorraad', 'Ras omschrijving', 'Status'])
-    add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Nr.', 'Omschrijving', 'Beschikbare voorraad', 'Ras omschrijving', 'Status'])
+    remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Nr.', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
+    add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Nr.', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     
     return remove_df, add_df
 
@@ -52,7 +52,7 @@ if uploaded_stock and uploaded_website:
     
     # Extract unieke rassen uit de bestanden
     stock_rassen = stock_df['Ras omschrijving'].dropna().unique().tolist()
-    website_rassen = website_df['Ras omschrijving'].dropna().unique().tolist()
+    website_rassen = website_df['Rasomschrijving'].dropna().unique().tolist()
     ras_options = sorted(set(stock_rassen + website_rassen))
     
     for ras in ras_options:
