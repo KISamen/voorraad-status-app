@@ -69,7 +69,12 @@ land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frank
 
 if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
-    website_df = load_data(uploaded_website, sheet_name='Stieren')
+    website_df_dict = load_data(uploaded_website, sheet_name=None)
+    if isinstance(website_df_dict, dict) and 'Stieren' in website_df_dict:
+        website_df = website_df_dict['Stieren']
+    else:
+        st.error("Het tabblad 'Stieren' ontbreekt in het geüploade bestand!")
+        st.stop()
     if isinstance(website_df, dict):
         website_df = website_df['Stieren']
     
