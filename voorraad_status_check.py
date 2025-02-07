@@ -13,6 +13,17 @@ def filter_products(stock_df, website_df, threshold_dict):
     
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
     
+    # Controleer of alle vereiste kolommen aanwezig zijn
+    required_columns_stock = {'Stiercode NL / KI code', 'Beschikbare voorraad'}
+    required_columns_website = {'Stiercode NL / KI code', 'Rasomschrijving', 'Status'}
+    
+    if not required_columns_stock.issubset(stock_df.columns):
+        st.error("Het voorraadbestand mist vereiste kolommen! Controleer de structuur.")
+        st.stop()
+    if not required_columns_website.issubset(website_df.columns):
+        st.error("Het webshopbestand mist vereiste kolommen! Controleer de structuur.")
+        st.stop()
+    
     # Zorg ervoor dat de kolomnaam correct overeenkomt met die in het Excel-bestand
     if 'Beschikbare voorraad' not in merged_df.columns:
         merged_df['Beschikbare voorraad'] = stock_df['Beschikbare voorraad'].fillna(0)
@@ -23,11 +34,11 @@ def filter_products(stock_df, website_df, threshold_dict):
     to_remove = []
     to_add = []
     for index, row in merged_df.iterrows():
-        if 'Rasomschrijving' in row and 'Stiercode NL / KI code' in row:  # Controleer of de kolommen bestaan
+        if 'Rasomschrijving' in row and 'Stiercode NL / KI code' in row:
             ras = row['Rasomschrijving']
             status = row['Status'].strip().lower() if 'Status' in row else 'onbekend'
             for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
-                drempel = threshold_dict.get((ras, land), 0)  # Drempel instelbaar
+                drempel = threshold_dict.get((ras, land), 0)
                 
                 if row['Beschikbare voorraad'] < drempel and status == 'active':
                     to_remove.append(row)
@@ -47,7 +58,7 @@ uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx
 
 # Mogelijkheid om voorraad drempelwaardes in te stellen
 st.sidebar.header("Voorraad Drempels Per Ras & Land")
-threshold_dict = {}
+theshold_dict = {}
 land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']
 
 if uploaded_stock and uploaded_website:
@@ -59,22 +70,32 @@ if uploaded_stock and uploaded_website:
     website_rassen = website_df['Rasomschrijving'].dropna().unique().tolist()
     ras_options = sorted(set(stock_rassen + website_rassen))
     
-    for ras in ras_options:
-        for land in land_options:
-            key = (ras, land)
-            threshold_dict[key] = st.sidebar.number_input(f"Drempel voor {ras} in {land}", min_value=0, value=10)
+    if not ras_options:
+        st.sidebar.warning("Geen rassen gevonden. Controleer of de juiste bestanden zijn geüpload.")
+    else:
+        with st.sidebar.expander("Drempelwaarden instellen", expanded=False):
+            for ras in ras_options:
+                with st.expander(f"{ras}"):
+                    for land in land_options:
+                        key = (ras, land)
+                        threshold_dict[key] = st.number_input(f"Drempel voor {land}", min_value=0, value=10, key=f"{ras}_{land}")
 
 # Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
 if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
     removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
-
-    st.subheader("Producten die van de webshop gehaald moeten worden:")
-    st.dataframe(removal_list)
     
-    st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
-    st.dataframe(addition_list)
+    if removal_list.empty:
+        st.info("Geen producten hoeven van de webshop gehaald te worden.")
+    else:
+        st.subheader("Producten die van de webshop gehaald moeten worden:")
+        st.dataframe(removal_list)
     
-    # Downloadoptie met twee tabbladen
+    if addition_list.empty:
+        st.info("Geen producten hoeven geactiveerd te worden op de webshop.")
+    else:
+        st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
+        st.dataframe(addition_list)
+    
     if not removal_list.empty or not addition_list.empty:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -89,3 +110,9 @@ if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
         )
     else:
         st.warning("Geen wijzigingen gevonden om te downloaden.")
+
+# Debugging: Print info over een specifieke stier
+debug_stier = "782891-S"
+debug_info = stock_df[stock_df["Stiercode NL / KI code"] == debug_stier]
+print("Debug informatie voor", debug_stier)
+print(debug_info)
