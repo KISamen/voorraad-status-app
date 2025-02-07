@@ -14,7 +14,7 @@ def filter_products(stock_df, website_df, threshold_dict):
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
     
     # Controleer of alle vereiste kolommen aanwezig zijn
-    required_columns_stock = {'Stiercode NL / KI code', 'Beschikbare voorraad'}
+    required_columns_stock = {'Stiercode NL / KI code', 'Beschikbare voorraad', 'Rasomschrijving'}
     required_columns_website = {'Stiercode NL / KI code', 'Rasomschrijving', 'Status'}
     
     if not required_columns_stock.issubset(stock_df.columns):
@@ -65,6 +65,11 @@ if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
     website_df = load_data(uploaded_website)
     
+    # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
+    if 'Rasomschrijving' not in stock_df.columns or 'Rasomschrijving' not in website_df.columns:
+        st.error("De kolom 'Rasomschrijving' ontbreekt in een van de geüploade bestanden!")
+        st.stop()
+    
     # Extract unieke rassen uit de bestanden
     stock_rassen = stock_df['Rasomschrijving'].dropna().unique().tolist()
     website_rassen = website_df['Rasomschrijving'].dropna().unique().tolist()
@@ -110,12 +115,3 @@ if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
         )
     else:
         st.warning("Geen wijzigingen gevonden om te downloaden.")
-
-# Debugging: Controleer of stock_df bestaat voordat we debuggen
-if 'stock_df' in locals() and "Stiercode NL / KI code" in stock_df.columns:
-    debug_stier = "782891-S"
-    debug_info = stock_df[stock_df["Stiercode NL / KI code"] == debug_stier]
-    print("Debug informatie voor", debug_stier)
-    print(debug_info)
-else:
-    print("FOUT: stock_df is niet gedefinieerd of bevat niet de juiste kolommen.")
