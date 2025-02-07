@@ -13,7 +13,7 @@ def filter_products(stock_df, website_df, threshold_dict):
     website_df = website_df.rename(columns={'Ras omschrijving': 'Rasomschrijving'})
     
     # Filter alleen de producten uit het tabblad "Stieren" in de website_df
-    if 'Stieren' in website_df.keys():
+    if isinstance(website_df, dict) and 'Stieren' in website_df:
         website_df = website_df['Stieren']
     
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
@@ -44,11 +44,11 @@ def filter_products(stock_df, website_df, threshold_dict):
         voorraad = row.get('Beschikbare voorraad', 0)
         
         drempel = threshold_dict.get(ras, 0)
-            
-            if voorraad < drempel and status == 'active':
-                to_remove.append(row)
-            elif voorraad >= drempel and status == 'archive':
-                to_add.append(row)
+        
+        if voorraad < drempel and status == 'active':
+            to_remove.append(row)
+        elif voorraad >= drempel and status == 'archive':
+            to_add.append(row)
     
     remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
@@ -65,7 +65,6 @@ uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx
 st.sidebar.header("Voorraad Drempels Per Ras")
 threshold_dict = {}
 
-
 if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
     website_df_dict = load_data(uploaded_website, sheet_name=None)
@@ -74,7 +73,6 @@ if uploaded_stock and uploaded_website:
     else:
         st.error("Het tabblad 'Stieren' ontbreekt in het geüploade bestand!")
         st.stop()
-    
     
     # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
     if 'Rasomschrijving' not in stock_df.columns or 'Rasomschrijving' not in website_df.columns:
