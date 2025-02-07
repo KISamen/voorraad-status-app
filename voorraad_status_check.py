@@ -70,6 +70,8 @@ land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frank
 if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
     website_df = load_data(uploaded_website, sheet_name='Stieren')
+    if isinstance(website_df, dict):
+        website_df = website_df['Stieren']
     
     # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
     if 'Rasomschrijving' not in stock_df.columns or 'Rasomschrijving' not in website_df.columns:
