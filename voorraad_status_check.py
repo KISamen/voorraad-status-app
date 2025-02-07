@@ -43,17 +43,17 @@ uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx
 
 # Mogelijkheid om voorraad drempelwaardes in te stellen
 st.sidebar.header("Voorraad Drempels Per Ras & Land")
+threshold_dict = {}
+land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']
+
 if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
     website_df = load_data(uploaded_website)
     
     # Extract unieke rassen uit de bestanden
     stock_rassen = stock_df['Ras omschrijving'].dropna().unique().tolist()
-    website_rassen = website_df['Rasomschrijving'].dropna().unique().tolist()
+    website_rassen = website_df['Ras omschrijving'].dropna().unique().tolist()
     ras_options = sorted(set(stock_rassen + website_rassen))
-    
-    threshold_dict = {}
-    land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']
     
     for ras in ras_options:
         for land in land_options:
@@ -61,28 +61,27 @@ if uploaded_stock and uploaded_website:
             threshold_dict[key] = st.sidebar.number_input(f"Drempel voor {ras} in {land}", min_value=0, value=10)
 
 # Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
-if st.button("Opnieuw berekenen") or (uploaded_stock and uploaded_website):
-    if uploaded_stock and uploaded_website:
-        removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
+if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
+    removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
 
-        st.subheader("Producten die van de webshop gehaald moeten worden:")
-        st.dataframe(removal_list)
-        
-        st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
-        st.dataframe(addition_list)
-        
-        # Downloadoptie met twee tabbladen
-        if not removal_list.empty or not addition_list.empty:
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                removal_list.to_excel(writer, sheet_name="Te verwijderen", index=False)
-                addition_list.to_excel(writer, sheet_name="Te activeren", index=False)
-            output.seek(0)
-            st.download_button(
-                label="Download Lijst",
-                data=output.getvalue(),
-                file_name="voorraad_status_update.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.warning("Geen wijzigingen gevonden om te downloaden.")
+    st.subheader("Producten die van de webshop gehaald moeten worden:")
+    st.dataframe(removal_list)
+    
+    st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
+    st.dataframe(addition_list)
+    
+    # Downloadoptie met twee tabbladen
+    if not removal_list.empty or not addition_list.empty:
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            removal_list.to_excel(writer, sheet_name="Te verwijderen", index=False)
+            addition_list.to_excel(writer, sheet_name="Te activeren", index=False)
+        output.seek(0)
+        st.download_button(
+            label="Download Lijst",
+            data=output.getvalue(),
+            file_name="voorraad_status_update.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        st.warning("Geen wijzigingen gevonden om te downloaden.")
