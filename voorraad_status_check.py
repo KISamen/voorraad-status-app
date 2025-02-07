@@ -43,8 +43,7 @@ def filter_products(stock_df, website_df, threshold_dict):
         status = str(row.get('Status', 'onbekend')).strip().lower()
         voorraad = row.get('Beschikbare voorraad', 0)
         
-        for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
-            drempel = threshold_dict.get((ras, land), 0)
+        drempel = threshold_dict.get(ras, 0)
             
             if voorraad < drempel and status == 'active':
                 to_remove.append(row)
@@ -63,9 +62,9 @@ uploaded_stock = st.file_uploader("Upload Voorraad Rapport", type=["xlsx"])
 uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx"])
 
 # Mogelijkheid om voorraad drempelwaardes in te stellen
-st.sidebar.header("Voorraad Drempels Per Ras & Land")
+st.sidebar.header("Voorraad Drempels Per Ras")
 threshold_dict = {}
-land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']
+
 
 if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
@@ -93,9 +92,7 @@ if uploaded_stock and uploaded_website:
         with st.sidebar.expander("Drempelwaarden instellen", expanded=False):
             for ras in ras_options:
                 st.sidebar.subheader(f"{ras}")
-                for land in land_options:
-                    key = (ras, land)
-                    threshold_dict[key] = st.sidebar.number_input(f"Drempel voor {land}", min_value=0, value=10, key=f"{ras}_{land}")
+                threshold_dict[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=10, key=f"{ras}")
 
 # Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
 if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
