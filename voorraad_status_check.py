@@ -35,16 +35,17 @@ def filter_products(stock_df, website_df, threshold_dict):
     to_remove = []
     to_add = []
     for index, row in merged_df.iterrows():
-        if 'Rasomschrijving' in row and 'Stiercode NL / KI code' in row:
-            ras = row['Rasomschrijving']
-            status = row['Status'].strip().lower() if 'Status' in row else 'onbekend'
-            for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
-                drempel = threshold_dict.get((ras, land), 0)
-                
-                if row['Beschikbare voorraad'] < drempel and status == 'active':
-                    to_remove.append(row)
-                elif row['Beschikbare voorraad'] >= drempel and status in ['archive', 'concept']:
-                    to_add.append(row)
+        ras = row.get('Rasomschrijving', 'Onbekend')
+        status = row.get('Status', 'onbekend').strip().lower()
+        voorraad = row.get('Beschikbare voorraad', 0)
+        
+        for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
+            drempel = threshold_dict.get((ras, land), 0)
+            
+            if voorraad < drempel and status == 'active':
+                to_remove.append(row)
+            elif voorraad >= drempel and status == 'archive':
+                to_add.append(row)
     
     remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
