@@ -54,10 +54,30 @@ if uploaded_stock and uploaded_website:
     st.subheader("Producten die van de webshop gehaald moeten worden:")
     st.dataframe(removal_list)
     
-    # Downloadoptie voor het resultaat
-    output = removal_list.to_excel("products_to_remove.xlsx", index=False)
-    st.download_button(label="Download Lijst", data=output, file_name="products_to_remove.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    
+    import io
+
+# Controleer of removal_list niet leeg is
+if not removal_list.empty:
+    # Maak een bytes-buffer om het Excel-bestand in op te slaan
+    output = io.BytesIO()
+
+    # Schrijf de dataframe naar een Excel-bestand in het geheugen
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        removal_list.to_excel(writer, index=False)
+
+    # Zet de buffer terug naar het begin
+    output.seek(0)
+
+    # Gebruik de juiste data in de download button
+    st.download_button(
+        label="Download Lijst",
+        data=output.getvalue(),  # Geef de binaire inhoud door
+        file_name="products_to_remove.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+else:
+    st.warning("Geen producten gevonden om te downloaden.")
+
     # Extra filter: Producten die op voorraad zijn maar niet op de website staan
     missing_products = filter_missing_products(stock_df, website_df)
     st.subheader("Producten die wel op voorraad zijn, maar niet op de webshop staan:")
