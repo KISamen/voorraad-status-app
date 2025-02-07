@@ -83,8 +83,8 @@ if uploaded_stock and uploaded_website:
         st.stop()
     
     # Extract unieke rassen uit de bestanden
-    stock_rassen = stock_df['Rasomschrijving'] if 'Rasomschrijving' in stock_df.columns else stock_df['Ras omschrijving'].dropna().unique().tolist()
-    website_rassen = website_df['Rasomschrijving'] if 'Rasomschrijving' in website_df.columns else website_df['Ras omschrijving'].dropna().unique().tolist()
+    stock_rassen = stock_df[valid_stock_column].dropna().unique().tolist()
+    website_rassen = website_df[valid_website_column].dropna().unique().tolist()
     ras_options = sorted(set(stock_rassen + website_rassen))
     
     if not ras_options:
