@@ -59,7 +59,7 @@ uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx
 
 # Mogelijkheid om voorraad drempelwaardes in te stellen
 st.sidebar.header("Voorraad Drempels Per Ras & Land")
-theshold_dict = {}
+threshold_dict = {}
 land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']
 
 if uploaded_stock and uploaded_website:
