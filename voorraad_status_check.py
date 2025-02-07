@@ -50,7 +50,11 @@ def filter_products(stock_df, website_df, threshold_dict):
     remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     
-    return remove_df, add_df
+    # Extra controle voor producten met voldoende voorraad die niet in de webshop staan
+    stock_only_df = stock_df[~stock_df['Stiercode NL / KI code'].isin(website_df['Stiercode NL / KI code'])]
+    stock_only_df = stock_only_df[stock_only_df['Beschikbare voorraad'] >= stock_only_df['Rasomschrijving'].map(lambda x: max([threshold_dict.get((x, land), 0) for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']]))]
+    
+    return remove_df, add_df, stock_only_df
 
 # Streamlit UI
 st.title("Voorraad en Website Status Beheer")
@@ -89,7 +93,7 @@ if uploaded_stock and uploaded_website:
 
 # Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
 if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
-    removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
+    removal_list, addition_list, stock_only_list = filter_products(stock_df, website_df, threshold_dict)
     
     if removal_list.empty:
         st.info("Geen producten hoeven van de webshop gehaald te worden.")
@@ -103,11 +107,18 @@ if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
         st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
         st.dataframe(addition_list)
     
-    if not removal_list.empty or not addition_list.empty:
+    if stock_only_list.empty:
+        st.info("Geen producten hoeven nog toegevoegd te worden aan de webshop.")
+    else:
+        st.subheader("Producten die nog toegevoegd moeten worden aan de webshop:")
+        st.dataframe(stock_only_list)
+    
+    if not removal_list.empty or not addition_list.empty or not stock_only_list.empty:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             removal_list.to_excel(writer, sheet_name="Te verwijderen", index=False)
             addition_list.to_excel(writer, sheet_name="Te activeren", index=False)
+            stock_only_list.to_excel(writer, sheet_name="Nog toe te voegen", index=False)
         output.seek(0)
         st.download_button(
             label="Download Lijst",
