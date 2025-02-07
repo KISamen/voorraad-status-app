@@ -12,39 +12,56 @@ def load_data(file, sheet_name=None):
 
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
+    # Controleer of de bestanden correct zijn geladen
     if stock_df is None or website_df is None:
-        st.error("Één van de datasets kon niet correct worden geladen.")
+        st.error("Fout: Één van de datasets kon niet correct worden geladen.")
+        return pd.DataFrame(), pd.DataFrame()
+
+    # Controleer of het echt een DataFrame is
+    if not isinstance(stock_df, pd.DataFrame):
+        st.error("Fout: 'stock_df' is geen geldige DataFrame.")
+        return pd.DataFrame(), pd.DataFrame()
+
+    if not isinstance(website_df, pd.DataFrame):
+        st.error("Fout: 'website_df' is geen geldige DataFrame.")
         return pd.DataFrame(), pd.DataFrame()
     
+    # Kolomnamen corrigeren
     stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving'})
     website_df = website_df.rename(columns={'Ras omschrijving': 'Rasomschrijving'})
-    
-    if isinstance(website_df, dict) and 'Stieren' in website_df:
-        website_df = website_df['Stieren']
-    
-    if 'Stiercode NL / KI code' not in stock_df.columns or 'Stiercode NL / KI code' not in website_df.columns:
-        st.error("Kolommen ontbreken in de geüploade bestanden.")
+
+    # Controleer of de verwachte kolommen aanwezig zijn
+    required_columns_stock = {'Stiercode NL / KI code', 'Beschikbare voorraad', 'Rasomschrijving'}
+    required_columns_website = {'Stiercode NL / KI code', 'Rasomschrijving', 'Status'}
+
+    if not required_columns_stock.issubset(stock_df.columns):
+        st.error("Het voorraadbestand mist vereiste kolommen! Controleer de structuur.")
         return pd.DataFrame(), pd.DataFrame()
     
+    if not required_columns_website.issubset(website_df.columns):
+        st.error("Het webshopbestand mist vereiste kolommen! Controleer de structuur.")
+        return pd.DataFrame(), pd.DataFrame()
+
+    # Merge de dataframes op 'Stiercode NL / KI code'
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
-    
-    if 'Beschikbare voorraad' not in merged_df.columns:
-        merged_df['Beschikbare voorraad'] = 0
-    
-    merged_df['Beschikbare voorraad'] = pd.to_numeric(merged_df['Beschikbare voorraad'], errors='coerce').fillna(0).astype(int)
-    
+
+    # Zorg dat 'Beschikbare voorraad' numeriek is
+    merged_df['Beschikbare voorraad'] = pd.to_numeric(merged_df.get('Beschikbare voorraad', 0), errors='coerce').fillna(0).astype(int)
+
+    # Lijsten om producten te verwijderen/toe te voegen
     to_remove, to_add = [], []
+
     for _, row in merged_df.iterrows():
         ras = row.get('Rasomschrijving', 'Onbekend')
         status = str(row.get('Status', 'onbekend')).strip().lower()
         voorraad = row.get('Beschikbare voorraad', 0)
         drempel = threshold_dict.get(ras, 0)
-        
+
         if voorraad < drempel and status == 'active':
             to_remove.append(row)
         elif voorraad >= drempel and status == 'archive':
             to_add.append(row)
-    
+
     return pd.DataFrame(to_remove), pd.DataFrame(to_add)
 
 # Streamlit UI
