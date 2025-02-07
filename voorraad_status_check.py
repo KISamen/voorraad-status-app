@@ -9,6 +9,11 @@ def load_data(file):
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
     merged_df = pd.merge(website_df, stock_df, left_on='Nummer', right_on='Nr.', how='left')
+    
+    # Zorg ervoor dat de kolomnaam correct overeenkomt met die in het Excel-bestand
+    if 'Beschikbare voorraad' not in merged_df.columns and 'F' in stock_df.columns:
+        merged_df['Beschikbare voorraad'] = stock_df['F']  # Kolom F in voorraadbestand bevat de juiste waarde
+    
     merged_df['Beschikbare voorraad'] = merged_df['Beschikbare voorraad'].fillna(0)  # Voorkom NaN waarden
 
     to_remove = []
@@ -47,30 +52,32 @@ for ras in ras_options:
         key = (ras, land)
         threshold_dict[key] = st.sidebar.number_input(f"Drempel voor {ras} in {land}", min_value=0, value=10)
 
-if uploaded_stock and uploaded_website:
-    stock_df = load_data(uploaded_stock)
-    website_df = load_data(uploaded_website)
-    
-    removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
+# Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
+if st.button("Opnieuw berekenen") or (uploaded_stock and uploaded_website):
+    if uploaded_stock and uploaded_website:
+        stock_df = load_data(uploaded_stock)
+        website_df = load_data(uploaded_website)
+        
+        removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
 
-    st.subheader("Producten die van de webshop gehaald moeten worden:")
-    st.dataframe(removal_list)
-    
-    st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
-    st.dataframe(addition_list)
-    
-    # Downloadoptie met twee tabbladen
-    if not removal_list.empty or not addition_list.empty:
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            removal_list.to_excel(writer, sheet_name="Te verwijderen", index=False)
-            addition_list.to_excel(writer, sheet_name="Te activeren", index=False)
-        output.seek(0)
-        st.download_button(
-            label="Download Lijst",
-            data=output.getvalue(),
-            file_name="voorraad_status_update.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    else:
-        st.warning("Geen wijzigingen gevonden om te downloaden.")
+        st.subheader("Producten die van de webshop gehaald moeten worden:")
+        st.dataframe(removal_list)
+        
+        st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
+        st.dataframe(addition_list)
+        
+        # Downloadoptie met twee tabbladen
+        if not removal_list.empty or not addition_list.empty:
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                removal_list.to_excel(writer, sheet_name="Te verwijderen", index=False)
+                addition_list.to_excel(writer, sheet_name="Te activeren", index=False)
+            output.seek(0)
+            st.download_button(
+                label="Download Lijst",
+                data=output.getvalue(),
+                file_name="voorraad_status_update.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.warning("Geen wijzigingen gevonden om te downloaden.")
