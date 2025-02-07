@@ -9,7 +9,8 @@ def load_data(file):
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
     # Corrigeer de kolomnamen om de juiste match te krijgen
-    stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving'})
+    stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving', 'Rasomschrijving': 'Rasomschrijving'})
+    website_df = website_df.rename(columns={'Ras omschrijving': 'Rasomschrijving'})
     
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
     
@@ -80,10 +81,10 @@ if uploaded_stock and uploaded_website:
     else:
         with st.sidebar.expander("Drempelwaarden instellen", expanded=False):
             for ras in ras_options:
-                with st.expander(f"{ras}"):
-                    for land in land_options:
-                        key = (ras, land)
-                        threshold_dict[key] = st.number_input(f"Drempel voor {land}", min_value=0, value=10, key=f"{ras}_{land}")
+                st.sidebar.subheader(f"{ras}")
+                for land in land_options:
+                    key = (ras, land)
+                    threshold_dict[key] = st.sidebar.number_input(f"Drempel voor {land}", min_value=0, value=10, key=f"{ras}_{land}")
 
 # Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
 if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
