@@ -9,7 +9,7 @@ def load_data(file, sheet_name=None):
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
     # Corrigeer de kolomnamen om de juiste match te krijgen
-    stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving', 'Rasomschrijving': 'Rasomschrijving'})
+    stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving', 'Rasomschrijving': 'Rasomschrijving', 'Rasomschrijving': 'Rasomschrijving'})
     website_df = website_df.rename(columns={'Ras omschrijving': 'Rasomschrijving'})
     
     # Filter alleen de producten uit het tabblad "Stieren" in de website_df
@@ -75,13 +75,13 @@ if uploaded_stock and uploaded_website:
         st.stop()
     
     # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
-    if 'Rasomschrijving' not in stock_df.columns or 'Rasomschrijving' not in website_df.columns:
+    if ('Rasomschrijving' not in stock_df.columns and 'Ras omschrijving' not in stock_df.columns) or ('Rasomschrijving' not in website_df.columns and 'Ras omschrijving' not in website_df.columns):
         st.error("De kolom 'Rasomschrijving' ontbreekt in een van de geüploade bestanden!")
         st.stop()
     
     # Extract unieke rassen uit de bestanden
-    stock_rassen = stock_df['Rasomschrijving'].dropna().unique().tolist()
-    website_rassen = website_df['Rasomschrijving'].dropna().unique().tolist()
+    stock_rassen = stock_df['Rasomschrijving'] if 'Rasomschrijving' in stock_df.columns else stock_df['Ras omschrijving'].dropna().unique().tolist()
+    website_rassen = website_df['Rasomschrijving'] if 'Rasomschrijving' in website_df.columns else website_df['Ras omschrijving'].dropna().unique().tolist()
     ras_options = sorted(set(stock_rassen + website_rassen))
     
     if not ras_options:
