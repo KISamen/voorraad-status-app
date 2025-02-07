@@ -4,45 +4,40 @@ import io
 
 # Functie om data in te laden
 def load_data(file, sheet_name=None):
-    return pd.read_excel(file, sheet_name=sheet_name)
+    try:
+        return pd.read_excel(file, sheet_name=sheet_name)
+    except Exception as e:
+        st.error(f"Fout bij het laden van het bestand: {e}")
+        return None
 
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
-    # Corrigeer de kolomnamen om de juiste match te krijgen
-    stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving', 'Rasomschrijving': 'Rasomschrijving', 'Rasomschrijving': 'Rasomschrijving'})
+    if stock_df is None or website_df is None:
+        st.error("Één van de datasets kon niet correct worden geladen.")
+        return pd.DataFrame(), pd.DataFrame()
+    
+    stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving'})
     website_df = website_df.rename(columns={'Ras omschrijving': 'Rasomschrijving'})
     
-    # Filter alleen de producten uit het tabblad "Stieren" in de website_df
     if isinstance(website_df, dict) and 'Stieren' in website_df:
         website_df = website_df['Stieren']
     
+    if 'Stiercode NL / KI code' not in stock_df.columns or 'Stiercode NL / KI code' not in website_df.columns:
+        st.error("Kolommen ontbreken in de geüploade bestanden.")
+        return pd.DataFrame(), pd.DataFrame()
+    
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
     
-    # Controleer of alle vereiste kolommen aanwezig zijn
-    required_columns_stock = {'Stiercode NL / KI code', 'Beschikbare voorraad', 'Rasomschrijving'}
-    required_columns_website = {'Stiercode NL / KI code', 'Rasomschrijving', 'Status'}
-    
-    if not required_columns_stock.issubset(stock_df.columns):
-        st.error("Het voorraadbestand mist vereiste kolommen! Controleer de structuur.")
-        st.stop()
-    if not required_columns_website.issubset(website_df.columns):
-        st.error("Het webshopbestand mist vereiste kolommen! Controleer de structuur.")
-        st.stop()
-    
-    # Zorg ervoor dat de kolomnaam correct overeenkomt met die in het Excel-bestand
     if 'Beschikbare voorraad' not in merged_df.columns:
-        merged_df['Beschikbare voorraad'] = stock_df['Beschikbare voorraad'].fillna(0)
+        merged_df['Beschikbare voorraad'] = 0
     
-    # Zorg ervoor dat de waarden correct worden gelezen als numeriek
     merged_df['Beschikbare voorraad'] = pd.to_numeric(merged_df['Beschikbare voorraad'], errors='coerce').fillna(0).astype(int)
     
-    to_remove = []
-    to_add = []
-    for index, row in merged_df.iterrows():
+    to_remove, to_add = [], []
+    for _, row in merged_df.iterrows():
         ras = row.get('Rasomschrijving', 'Onbekend')
         status = str(row.get('Status', 'onbekend')).strip().lower()
         voorraad = row.get('Beschikbare voorraad', 0)
-        
         drempel = threshold_dict.get(ras, 0)
         
         if voorraad < drempel and status == 'active':
@@ -50,10 +45,7 @@ def filter_products(stock_df, website_df, threshold_dict):
         elif voorraad >= drempel and status == 'archive':
             to_add.append(row)
     
-    remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
-    add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
-    
-    return remove_df, add_df
+    return pd.DataFrame(to_remove), pd.DataFrame(to_add)
 
 # Streamlit UI
 st.title("Voorraad en Website Status Beheer")
@@ -61,55 +53,41 @@ st.title("Voorraad en Website Status Beheer")
 uploaded_stock = st.file_uploader("Upload Voorraad Rapport", type=["xlsx"])
 uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx"])
 
-# Mogelijkheid om voorraad drempelwaardes in te stellen
 st.sidebar.header("Voorraad Drempels Per Ras")
 threshold_dict = {}
 
 if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
     website_df_dict = load_data(uploaded_website, sheet_name=None)
-    if isinstance(website_df_dict, dict) and 'Stieren' in website_df_dict:
-        website_df = website_df_dict['Stieren']
-    else:
+    website_df = website_df_dict.get('Stieren') if isinstance(website_df_dict, dict) else None
+    
+    if website_df is None:
         st.error("Het tabblad 'Stieren' ontbreekt in het geüploade bestand!")
         st.stop()
     
-    # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
-    valid_stock_column = 'Rasomschrijving' if 'Rasomschrijving' in stock_df.columns else 'Ras omschrijving' if 'Ras omschrijving' in stock_df.columns else None
-    valid_website_column = 'Rasomschrijving' if 'Rasomschrijving' in website_df.columns else 'Ras omschrijving' if 'Ras omschrijving' in website_df.columns else None
-    
-    if not valid_stock_column or not valid_website_column:
-        st.error("De kolom 'Rasomschrijving' ontbreekt in een van de geüploade bestanden!")
-        st.stop()
-    
-    # Extract unieke rassen uit de bestanden
-    stock_rassen = stock_df[valid_stock_column].dropna().unique().tolist()
-    website_rassen = website_df[valid_website_column].dropna().unique().tolist()
-    ras_options = sorted(set(stock_rassen + website_rassen))
-    
-    if not ras_options:
-        st.sidebar.warning("Geen rassen gevonden. Controleer of de juiste bestanden zijn geüpload.")
-    else:
+    if stock_df is not None and website_df is not None:
+        stock_rassen = stock_df.get('Rasomschrijving', pd.Series()).dropna().unique().tolist()
+        website_rassen = website_df.get('Rasomschrijving', pd.Series()).dropna().unique().tolist()
+        ras_options = sorted(set(stock_rassen + website_rassen))
+        
         with st.sidebar.expander("Drempelwaarden instellen", expanded=False):
             for ras in ras_options:
-                st.sidebar.subheader(f"{ras}")
                 threshold_dict[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=10, key=f"{ras}")
 
-# Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
 if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
     removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
     
-    if removal_list.empty:
-        st.info("Geen producten hoeven van de webshop gehaald te worden.")
-    else:
+    if not removal_list.empty:
         st.subheader("Producten die van de webshop gehaald moeten worden:")
         st.dataframe(removal_list)
-    
-    if addition_list.empty:
-        st.info("Geen producten hoeven geactiveerd te worden op de webshop.")
     else:
+        st.info("Geen producten hoeven van de webshop gehaald te worden.")
+    
+    if not addition_list.empty:
         st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
         st.dataframe(addition_list)
+    else:
+        st.info("Geen producten hoeven geactiveerd te worden op de webshop.")
     
     if not removal_list.empty or not addition_list.empty:
         output = io.BytesIO()
@@ -123,5 +101,3 @@ if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
             file_name="voorraad_status_update.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-    else:
-        st.warning("Geen wijzigingen gevonden om te downloaden.")
