@@ -12,21 +12,23 @@ def filter_products(stock_df, website_df, threshold_dict):
     merged_df['Beschikbare voorraad'] = merged_df['Beschikbare voorraad'].fillna(0)  # Voorkom NaN waarden
 
     to_remove = []
+    to_add = []
     for index, row in merged_df.iterrows():
         if 'Ras omschrijving' in row and 'Nr.' in row:  # Controleer of de kolommen bestaan
             ras = row['Ras omschrijving']
+            status = row['Status'] if 'Status' in row else 'Onbekend'
             for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
                 drempel = threshold_dict.get((ras, land), 0)  # Drempel instelbaar
-                if row['Beschikbare voorraad'] < drempel and row.get(land, 'Nee') == 'Ja':
+                
+                if row['Beschikbare voorraad'] < drempel and row.get(land, 'Nee') == 'Ja' and status == 'actief':
                     to_remove.append(row)
+                elif row['Beschikbare voorraad'] >= drempel and row.get(land, 'Nee') == 'Ja' and status in ['archive', 'concept']:
+                    to_add.append(row)
     
-    return pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Nr.', 'Omschrijving', 'Beschikbare voorraad', 'Ras omschrijving'])
-
-# Functie om producten te filteren die wel op voorraad zijn maar niet op de webshop
-def filter_missing_products(stock_df, website_df):
-    merged_df = pd.merge(website_df, stock_df, left_on='Nummer', right_on='Nr.', how='right', indicator=True)
-    missing_products = merged_df[merged_df['_merge'] == 'right_only']
-    return missing_products[['Nr.', 'Omschrijving', 'Beschikbare voorraad', 'Ras omschrijving']]
+    remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Nr.', 'Omschrijving', 'Beschikbare voorraad', 'Ras omschrijving', 'Status'])
+    add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Nr.', 'Omschrijving', 'Beschikbare voorraad', 'Ras omschrijving', 'Status'])
+    
+    return remove_df, add_df
 
 # Streamlit UI
 st.title("Voorraad en Website Status Beheer")
@@ -49,43 +51,26 @@ if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
     website_df = load_data(uploaded_website)
     
-    removal_list = filter_products(stock_df, website_df, threshold_dict)
+    removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
 
-    # Zorg ervoor dat removal_list altijd een DataFrame is
-    if removal_list is None or not isinstance(removal_list, pd.DataFrame):
-        removal_list = pd.DataFrame(columns=['Nr.', 'Omschrijving', 'Beschikbare voorraad', 'Ras omschrijving'])
-    
     st.subheader("Producten die van de webshop gehaald moeten worden:")
     st.dataframe(removal_list)
     
-    # Downloadoptie voor het resultaat
-    if not removal_list.empty:
+    st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
+    st.dataframe(addition_list)
+    
+    # Downloadoptie met twee tabbladen
+    if not removal_list.empty or not addition_list.empty:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            removal_list.to_excel(writer, index=False)
+            removal_list.to_excel(writer, sheet_name="Te verwijderen", index=False)
+            addition_list.to_excel(writer, sheet_name="Te activeren", index=False)
         output.seek(0)
         st.download_button(
             label="Download Lijst",
             data=output.getvalue(),
-            file_name="products_to_remove.xlsx",
+            file_name="voorraad_status_update.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
-        st.warning("Geen producten gevonden om te downloaden.")
-    
-    # Extra filter: Producten die op voorraad zijn maar niet op de website staan
-    missing_products = filter_missing_products(stock_df, website_df)
-    st.subheader("Producten die wel op voorraad zijn, maar niet op de webshop staan:")
-    st.dataframe(missing_products)
-    
-    if not missing_products.empty:
-        output_missing = io.BytesIO()
-        with pd.ExcelWriter(output_missing, engine='openpyxl') as writer:
-            missing_products.to_excel(writer, index=False)
-        output_missing.seek(0)
-        st.download_button(
-            label="Download Lijst",
-            data=output_missing.getvalue(),
-            file_name="products_to_add.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        st.warning("Geen wijzigingen gevonden om te downloaden.")
