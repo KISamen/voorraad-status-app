@@ -8,11 +8,11 @@ def load_data(file):
 
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
-    merged_df = pd.merge(website_df, stock_df, left_on='Nummer', right_on='Nr.', how='left')
+    merged_df = pd.merge(website_df, stock_df, left_on='Levensnummer', right_on='Nr.', how='left')
     
     # Zorg ervoor dat de kolomnaam correct overeenkomt met die in het Excel-bestand
-    if 'Beschikbare voorraad' not in merged_df.columns and 'F' in stock_df.columns:
-        merged_df['Beschikbare voorraad'] = stock_df['F']  # Kolom F in voorraadbestand bevat de juiste waarde
+    if 'Beschikbare voorraad' not in merged_df.columns:
+        merged_df['Beschikbare voorraad'] = stock_df['Beschikbare voorraad'].fillna(0)  # Kolom uit voorraadbestand
     
     merged_df['Beschikbare voorraad'] = merged_df['Beschikbare voorraad'].fillna(0)  # Voorkom NaN waarden
 
@@ -43,21 +43,26 @@ uploaded_website = st.file_uploader("Upload Website Status Rapport", type=["xlsx
 
 # Mogelijkheid om voorraad drempelwaardes in te stellen
 st.sidebar.header("Voorraad Drempels Per Ras & Land")
-threshold_dict = {}
-ras_options = ['Belgisch Witblauw', 'Holstein zwartbont']  # Uitbreiden met daadwerkelijke rassen
-land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']
-
-for ras in ras_options:
-    for land in land_options:
-        key = (ras, land)
-        threshold_dict[key] = st.sidebar.number_input(f"Drempel voor {ras} in {land}", min_value=0, value=10)
+if uploaded_stock and uploaded_website:
+    stock_df = load_data(uploaded_stock)
+    website_df = load_data(uploaded_website)
+    
+    # Extract unieke rassen uit de bestanden
+    stock_rassen = stock_df['Ras omschrijving'].dropna().unique().tolist()
+    website_rassen = website_df['Rasomschrijving'].dropna().unique().tolist()
+    ras_options = sorted(set(stock_rassen + website_rassen))
+    
+    threshold_dict = {}
+    land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']
+    
+    for ras in ras_options:
+        for land in land_options:
+            key = (ras, land)
+            threshold_dict[key] = st.sidebar.number_input(f"Drempel voor {ras} in {land}", min_value=0, value=10)
 
 # Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
 if st.button("Opnieuw berekenen") or (uploaded_stock and uploaded_website):
     if uploaded_stock and uploaded_website:
-        stock_df = load_data(uploaded_stock)
-        website_df = load_data(uploaded_website)
-        
         removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
 
         st.subheader("Producten die van de webshop gehaald moeten worden:")
