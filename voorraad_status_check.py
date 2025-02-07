@@ -111,8 +111,11 @@ if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
     else:
         st.warning("Geen wijzigingen gevonden om te downloaden.")
 
-# Debugging: Print info over een specifieke stier
-debug_stier = "782891-S"
-debug_info = stock_df[stock_df["Stiercode NL / KI code"] == debug_stier]
-print("Debug informatie voor", debug_stier)
-print(debug_info)
+# Debugging: Controleer of stock_df bestaat voordat we debuggen
+if 'stock_df' in locals() and "Stiercode NL / KI code" in stock_df.columns:
+    debug_stier = "782891-S"
+    debug_info = stock_df[stock_df["Stiercode NL / KI code"] == debug_stier]
+    print("Debug informatie voor", debug_stier)
+    print(debug_info)
+else:
+    print("FOUT: stock_df is niet gedefinieerd of bevat niet de juiste kolommen.")
