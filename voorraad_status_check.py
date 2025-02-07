@@ -3,14 +3,18 @@ import streamlit as st
 import io
 
 # Functie om data in te laden
-def load_data(file):
-    return pd.read_excel(file)
+def load_data(file, sheet_name=None):
+    return pd.read_excel(file, sheet_name=sheet_name)
 
 # Functie om producten te filteren op basis van voorraad drempelwaardes
 def filter_products(stock_df, website_df, threshold_dict):
     # Corrigeer de kolomnamen om de juiste match te krijgen
     stock_df = stock_df.rename(columns={'Nr.': 'Stiercode NL / KI code', 'Ras omschrijving': 'Rasomschrijving', 'Rasomschrijving': 'Rasomschrijving'})
     website_df = website_df.rename(columns={'Ras omschrijving': 'Rasomschrijving'})
+    
+    # Filter alleen de producten uit het tabblad "Stieren" in de website_df
+    if 'Stieren' in website_df.keys():
+        website_df = website_df['Stieren']
     
     merged_df = pd.merge(website_df, stock_df, on='Stiercode NL / KI code', how='left')
     
@@ -50,11 +54,7 @@ def filter_products(stock_df, website_df, threshold_dict):
     remove_df = pd.DataFrame(to_remove) if to_remove else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     add_df = pd.DataFrame(to_add) if to_add else pd.DataFrame(columns=['Stiercode NL / KI code', 'Naam stier', 'Beschikbare voorraad', 'Rasomschrijving', 'Status'])
     
-    # Extra controle voor producten met voldoende voorraad die niet in de webshop staan
-    stock_only_df = stock_df[~stock_df['Stiercode NL / KI code'].isin(website_df['Stiercode NL / KI code'])]
-    stock_only_df = stock_only_df[stock_only_df['Beschikbare voorraad'] >= stock_only_df['Rasomschrijving'].map(lambda x: max([threshold_dict.get((x, land), 0) for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']]))]
-    
-    return remove_df, add_df, stock_only_df
+    return remove_df, add_df
 
 # Streamlit UI
 st.title("Voorraad en Website Status Beheer")
@@ -69,7 +69,7 @@ land_options = ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frank
 
 if uploaded_stock and uploaded_website:
     stock_df = load_data(uploaded_stock)
-    website_df = load_data(uploaded_website)
+    website_df = load_data(uploaded_website, sheet_name='Stieren')
     
     # Controleer of de kolom 'Rasomschrijving' in de bestanden staat
     if 'Rasomschrijving' not in stock_df.columns or 'Rasomschrijving' not in website_df.columns:
@@ -93,7 +93,7 @@ if uploaded_stock and uploaded_website:
 
 # Knop om opnieuw te berekenen zonder opnieuw bestanden te uploaden
 if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
-    removal_list, addition_list, stock_only_list = filter_products(stock_df, website_df, threshold_dict)
+    removal_list, addition_list = filter_products(stock_df, website_df, threshold_dict)
     
     if removal_list.empty:
         st.info("Geen producten hoeven van de webshop gehaald te worden.")
@@ -107,18 +107,11 @@ if st.button("Opnieuw berekenen") and uploaded_stock and uploaded_website:
         st.subheader("Producten die weer actief gezet moeten worden op de webshop:")
         st.dataframe(addition_list)
     
-    if stock_only_list.empty:
-        st.info("Geen producten hoeven nog toegevoegd te worden aan de webshop.")
-    else:
-        st.subheader("Producten die nog toegevoegd moeten worden aan de webshop:")
-        st.dataframe(stock_only_list)
-    
-    if not removal_list.empty or not addition_list.empty or not stock_only_list.empty:
+    if not removal_list.empty or not addition_list.empty:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             removal_list.to_excel(writer, sheet_name="Te verwijderen", index=False)
             addition_list.to_excel(writer, sheet_name="Te activeren", index=False)
-            stock_only_list.to_excel(writer, sheet_name="Nog toe te voegen", index=False)
         output.seek(0)
         st.download_button(
             label="Download Lijst",
