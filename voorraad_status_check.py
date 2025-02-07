@@ -36,7 +36,7 @@ def filter_products(stock_df, website_df, threshold_dict):
     to_add = []
     for index, row in merged_df.iterrows():
         ras = row.get('Rasomschrijving', 'Onbekend')
-        status = row.get('Status', 'onbekend').strip().lower()
+        status = str(row.get('Status', 'onbekend')).strip().lower()
         voorraad = row.get('Beschikbare voorraad', 0)
         
         for land in ['Nederland', 'Duitsland', 'België (NL)', 'België (FR)', 'Frankrijk']:
