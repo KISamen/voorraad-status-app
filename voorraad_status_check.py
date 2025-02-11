@@ -46,8 +46,14 @@ if webshop_file and voorraad_file:
     elif "Ras_x" in merged_df.columns:
         merged_df.rename(columns={"Ras_x": "Ras"}, inplace=True)
     
+    # Corrigeren van de Naam Stier-kolom
+    if "naam stier_y" in merged_df.columns:
+        merged_df["Naam Stier"] = merged_df["naam stier_y"].combine_first(merged_df.get("naam stier_x"))
+    elif "naam stier_x" in merged_df.columns:
+        merged_df.rename(columns={"naam stier_x": "Naam Stier"}, inplace=True)
+    
     # Drop overbodige kolommen
-    merged_df.drop(columns=[col for col in ["Ras_x", "Ras_y"] if col in merged_df.columns], inplace=True)
+    merged_df.drop(columns=[col for col in ["Ras_x", "Ras_y", "naam stier_x", "naam stier_y"] if col in merged_df.columns], inplace=True)
     
     # Status en Voorraad normaliseren
     merged_df["Status"] = merged_df["Status"].astype(str).str.strip().str.upper()
@@ -79,7 +85,7 @@ if webshop_file and voorraad_file:
         if voorraad < drempel and status == "ACTIVE":
             return "Stieren met beperkte voorraad (op archief zetten)"
         elif voorraad > drempel and status == "ARCHIVE":
-            return "Controle: Mag weer online (op actief zetten)"
+            return "Voorraad weer voldoende (op actief zetten)"
         
         return None
     
