@@ -29,8 +29,8 @@ if webshop_file and voorraad_file:
     st.write("Kolomnamen webshop_df:", webshop_df.columns.tolist())
     
     # Data voorbereiden
-    voorraad_df = voorraad_df.rename(columns={"Nr": "Stiercode", "X": "Ras", "F": "Voorraad"})
-    webshop_df = webshop_df.rename(columns={"F": "Stiercode", "C": "Ras", "G": "Status"})
+    voorraad_df = voorraad_df.rename(columns={"Nr.": "Stiercode", "X": "Ras", "F": "Voorraad"})
+    webshop_df = webshop_df.rename(columns={"Stiercode NL / KI code": "Stiercode", "Rasomschrijving": "Ras", "Status": "Status"})
     
     # Samenvoegen op Stiercode
     merged_df = pd.merge(voorraad_df, webshop_df, on="Stiercode", how="outer")
