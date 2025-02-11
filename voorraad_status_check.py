@@ -24,21 +24,12 @@ if webshop_file and voorraad_file:
     voorraad_df.columns = voorraad_df.columns.str.strip().str.lower()
     webshop_df.columns = webshop_df.columns.str.strip().str.lower()
     
-    # Debugging: Toon de werkelijke kolomnamen
-    st.write("Kolomnamen voorraad_df:", voorraad_df.columns.tolist())
-    st.write("Kolomnamen webshop_df:", webshop_df.columns.tolist())
-    
     # Kolomnamen mappen inclusief varianten
     voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras", "naam stier": "naam stier"}, inplace=True)
     webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status", "naam stier": "naam stier"}, inplace=True)
     
-    # Debugging: Toon kolomnamen na hernoemen
-    st.write("Kolomnamen na hernoemen - voorraad_df:", voorraad_df.columns.tolist())
-    st.write("Kolomnamen na hernoemen - webshop_df:", webshop_df.columns.tolist())
-    
     # Samenvoegen op Stiercode
     merged_df = pd.merge(voorraad_df, webshop_df, on="Stiercode", how="outer")
-    st.write("Kolomnamen merged_df:", merged_df.columns.tolist())
     
     # Corrigeren van de Ras-kolom (Ras_x en Ras_y samenvoegen)
     if "Ras_y" in merged_df.columns:
@@ -55,9 +46,6 @@ if webshop_file and voorraad_file:
     # Status en Voorraad normaliseren
     merged_df["Status"] = merged_df["Status"].astype(str).str.strip().str.upper()
     merged_df["Voorraad"] = merged_df["Voorraad"].fillna(0)
-    
-    # Debugging: Toon unieke statuswaarden
-    st.write("Unieke waarden in 'Status':", merged_df["Status"].unique())
     
     # Unieke rassen ophalen
     unieke_rassen = merged_df["Ras"].dropna().unique()
@@ -88,9 +76,6 @@ if webshop_file and voorraad_file:
     
     # Status bepalen
     merged_df["Resultaat"] = merged_df.apply(bepaal_status, axis=1)
-    
-    # Debugging: Controleer resultaten
-    st.write("Aantal per categorie:", merged_df["Resultaat"].value_counts())
     
     # Resultaten tonen
     for categorie, titel in zip(["Stieren met beperkte voorraad (op archief zetten)",
