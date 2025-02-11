@@ -20,23 +20,32 @@ if webshop_file and voorraad_file:
     voorraad_df = pd.read_excel(voorraad_file, sheet_name=0)  # Eerste sheet
     webshop_df = pd.read_excel(webshop_xls, sheet_name="Stieren")
     
-    # Strip kolomnamen om spaties te verwijderen
-    voorraad_df.columns = voorraad_df.columns.str.strip()
-    webshop_df.columns = webshop_df.columns.str.strip()
+    # Strip kolomnamen om spaties te verwijderen en naar kleine letters converteren
+    voorraad_df.columns = voorraad_df.columns.str.strip().str.lower()
+    webshop_df.columns = webshop_df.columns.str.strip().str.lower()
     
     # Debugging: Toon de werkelijke kolomnamen
     st.write("Kolomnamen voorraad_df:", voorraad_df.columns.tolist())
     st.write("Kolomnamen webshop_df:", webshop_df.columns.tolist())
     
-    # Data voorbereiden
-    voorraad_df = voorraad_df.rename(columns={"Nr.": "Stiercode", "Beschikbare voorraad": "Voorraad", "Rasomschrijving": "Ras"})
-    webshop_df = webshop_df.rename(columns={"Stiercode NL / KI code": "Stiercode", "Rasomschrijving": "Ras", "Status": "Status"})
+    # Kolomnamen mappen inclusief varianten
+    voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras"}, inplace=True)
+    webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status"}, inplace=True)
+    
+    # Debugging: Toon kolomnamen na hernoemen
+    st.write("Kolomnamen na hernoemen - voorraad_df:", voorraad_df.columns.tolist())
+    st.write("Kolomnamen na hernoemen - webshop_df:", webshop_df.columns.tolist())
     
     # Samenvoegen op Stiercode
     merged_df = pd.merge(voorraad_df, webshop_df, on="Stiercode", how="outer")
+    st.write("Kolomnamen merged_df:", merged_df.columns.tolist())
     
     # Unieke rassen ophalen
-    unieke_rassen = merged_df["Ras"].dropna().unique()
+    if "Ras" in merged_df.columns:
+        unieke_rassen = merged_df["Ras"].dropna().unique()
+    else:
+        st.error("Fout: 'Ras' kolom niet gevonden in merged_df. Controleer of de juiste kolommen correct zijn ingelezen.")
+        unieke_rassen = []
     
     # Drempelwaarden per ras instellen
     for ras in unieke_rassen:
@@ -44,13 +53,13 @@ if webshop_file and voorraad_file:
     
     # Functie om te bepalen in welke lijst een stier hoort
     def bepaal_status(row):
-        voorraad = row["Voorraad"]
-        status = row["Status"]
-        ras = row["Ras"]
+        voorraad = row.get("Voorraad", None)
+        status = row.get("Status", None)
+        ras = row.get("Ras", None)
         drempel = drempelwaarden.get(ras, default_drempel)
         
         if pd.isna(voorraad) or pd.isna(status):
-            return "Toevoegen aan Webshop" if voorraad > drempel else None
+            return "Toevoegen aan Webshop" if voorraad and voorraad > drempel else None
         
         if voorraad < drempel and status == "Active":
             return "Stieren met beperkte voorraad (op archief zetten)"
