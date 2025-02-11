@@ -82,6 +82,16 @@ if webshop_file and voorraad_file:
     # Status bepalen
     merged_df["Resultaat"] = merged_df.apply(bepaal_status, axis=1)
     
+    # Overzicht aanpassingen
+    st.subheader("Overzicht aanpassingen")
+    overzicht_data = {
+        "Aantal stieren met beperkte voorraad": (merged_df["Resultaat"] == "Stieren met beperkte voorraad").sum(),
+        "Aantal stieren mag weer online": (merged_df["Resultaat"] == "Voorraad weer voldoende").sum(),
+        "Aantal stieren toevoegen aan webshop": (merged_df["Resultaat"] == "Toevoegen aan Webshop").sum()
+    }
+    overzicht_df = pd.DataFrame([overzicht_data])
+    st.dataframe(overzicht_df)
+    
     # Opslaan van resultaten
     resultaten = {}
     for categorie, titel in zip(["Stieren met beperkte voorraad",
