@@ -29,8 +29,8 @@ if webshop_file and voorraad_file:
     st.write("Kolomnamen webshop_df:", webshop_df.columns.tolist())
     
     # Kolomnamen mappen inclusief varianten
-    voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras", "naam stier": "Naam Stier"}, inplace=True)
-    webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status", "naam stier": "Naam Stier"}, inplace=True)
+    voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras", "naam stier": "naam stier"}, inplace=True)
+    webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status", "naam stier": "naam stier"}, inplace=True)
     
     # Debugging: Toon kolomnamen na hernoemen
     st.write("Kolomnamen na hernoemen - voorraad_df:", voorraad_df.columns.tolist())
@@ -46,13 +46,8 @@ if webshop_file and voorraad_file:
     elif "Ras_x" in merged_df.columns:
         merged_df.rename(columns={"Ras_x": "Ras"}, inplace=True)
     
-    # Corrigeren van de Naam Stier-kolom
-    if "naam stier_y" in merged_df.columns and "naam stier_x" in merged_df.columns:
-        merged_df["Naam Stier"] = merged_df["naam stier_y"].combine_first(merged_df["naam stier_x"])
-    elif "naam stier_y" in merged_df.columns:
-        merged_df.rename(columns={"naam stier_y": "Naam Stier"}, inplace=True)
-    elif "naam stier_x" in merged_df.columns:
-        merged_df.rename(columns={"naam stier_x": "Naam Stier"}, inplace=True)
+    # Corrigeren van de Naam Stier-kolom (Correct toevoegen vóór verwijdering)
+    merged_df["Naam Stier"] = merged_df.get("naam stier_y", "").combine_first(merged_df.get("naam stier_x", ""))
     
     # Drop overbodige kolommen
     merged_df.drop(columns=[col for col in ["Ras_x", "Ras_y", "naam stier_x", "naam stier_y"] if col in merged_df.columns], inplace=True)
