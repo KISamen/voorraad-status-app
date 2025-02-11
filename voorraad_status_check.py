@@ -18,7 +18,7 @@ if webshop_file and voorraad_file:
     # Inladen van de bestanden
     webshop_xls = pd.ExcelFile(webshop_file)
     voorraad_df = pd.read_excel(voorraad_file, sheet_name=0)  # Eerste sheet
-    webshop_df = pd.read_excel(webshop_xls, sheet_name="stieren")
+    webshop_df = pd.read_excel(webshop_xls, sheet_name="Stieren")
     
     # Data voorbereiden
     voorraad_df = voorraad_df.rename(columns={"Nr.": "Stiercode", "X": "Ras", "F": "Voorraad"})
