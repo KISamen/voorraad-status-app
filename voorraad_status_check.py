@@ -92,7 +92,9 @@ if webshop_file and voorraad_file:
     merged_df["Resultaat"] = merged_df.apply(bepaal_status, axis=1)
     
     # Gesekste stieren identificeren
-    gesekst_df = voorraad_df[voorraad_df["Stiercode"].str.endswith(('-S', '-M'))].copy()
+    gesekst_df = voorraad_df[voorraad_df["Stiercode"].astype(str).str.endswith(('-S', '-M'))].copy()
+    gesekst_df["Ras"] = gesekst_df["Ras"].fillna("Onbekend")  # Voorkom NaN waarden
+    gesekst_df["Voorraad"] = gesekst_df["Voorraad"].fillna(0)  # Voorkom NaN waarden
     gesekst_df["Gesekst Resultaat"] = gesekst_df.apply(lambda row: "Gesekst beperkte voorraad" if row["Voorraad"] < drempelwaarden.get(row["Ras"], default_drempel) else "Gesekst voldoende voorraad", axis=1)
     
     # Overzicht aanpassingen
