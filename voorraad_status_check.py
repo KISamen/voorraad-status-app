@@ -11,6 +11,9 @@ st.sidebar.header("Instellingen")
 drempelwaarden = {}
 default_drempel = 10  # Standaard op 10, tenzij specifiek aangepast
 
+# Rassen waarvoor de drempelwaarde 50 moet zijn
+speciale_rassen = {"red holstein", "holstein zwartbont", "jersey", "belgisch witblauw"}
+
 # Upload bestanden
 st.sidebar.subheader("Upload Bestanden")
 webshop_file = st.sidebar.file_uploader("Upload Status Webshop (Excel)", type=["xlsx"])
@@ -57,7 +60,7 @@ if webshop_file and voorraad_file:
     
     # Drempelwaarden per ras instellen
     for ras in unieke_rassen:
-        if ras.lower() in ["Red Holstein", "Holstein zwartbont", "Jersey", "Belgisch Witblauw"]:
+        if ras.lower().strip() in speciale_rassen:
             drempelwaarden[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=50)
         else:
             drempelwaarden[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=10)
@@ -66,7 +69,7 @@ if webshop_file and voorraad_file:
     def bepaal_status(row):
         voorraad = row.get("Voorraad", 0)  # Alleen correcte voorraadkolom gebruiken
         status = row.get("Status", "").strip().upper()
-        ras = row.get("Ras", None)
+        ras = row.get("Ras", "").strip().lower()
         drempel = drempelwaarden.get(ras, default_drempel)
         
         if status == "CONCEPT":
@@ -110,13 +113,3 @@ if webshop_file and voorraad_file:
             st.subheader(titel)
             st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
             resultaten[titel[:31]] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]  # Sheetnaam max 31 tekens
-    
-    # Excel-downloadknop zonder foutmeldingen
-    if resultaten:
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            for sheet_name, df in resultaten.items():
-                clean_sheet_name = re.sub(r'[^A-Za-z0-9 ]', '', sheet_name)[:31]  # Speciale tekens verwijderen en max 31 tekens
-                df.to_excel(writer, sheet_name=clean_sheet_name, index=False)
-        output.seek(0)
-        st.download_button(label="Download Excel-bestand", data=output, file_name="Stieren_Voorraad_Resultaten.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
