@@ -33,6 +33,10 @@ if webshop_file and voorraad_file:
     voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras", "naam stier": "naam stier"}, inplace=True)
     webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status", "naam stier": "naam stier"}, inplace=True)
     
+    # Zorg ervoor dat Stiercode als string wordt geïnterpreteerd
+    webshop_df["Stiercode"] = webshop_df["Stiercode"].astype(str)
+    voorraad_df["Stiercode"] = voorraad_df["Stiercode"].astype(str)
+    
     # Hoofd-stiercode bepalen door achtervoegsel (-S, -M, etc.) te verwijderen
     webshop_df["Hoofd Stiercode"] = webshop_df["Stiercode"].str.replace(r'-[A-Za-z]+$', '', regex=True)
     voorraad_df["Hoofd Stiercode"] = voorraad_df["Stiercode"].str.replace(r'-[A-Za-z]+$', '', regex=True)
