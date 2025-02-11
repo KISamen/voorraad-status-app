@@ -33,23 +33,19 @@ if webshop_file and voorraad_file:
     voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras", "naam stier": "naam stier"}, inplace=True)
     webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status", "naam stier": "naam stier"}, inplace=True)
     
-    # Samenvoegen op Stiercode
-    merged_df = pd.merge(voorraad_df, webshop_df, on="Stiercode", how="outer")
+    # Hoofd-stiercode bepalen door achtervoegsel (-S, -M, etc.) te verwijderen
+    webshop_df["Hoofd Stiercode"] = webshop_df["Stiercode"].str.replace(r'-[A-Za-z]+$', '', regex=True)
+    voorraad_df["Hoofd Stiercode"] = voorraad_df["Stiercode"].str.replace(r'-[A-Za-z]+$', '', regex=True)
     
-    # Corrigeren van de Ras-kolom (Ras_x en Ras_y samenvoegen)
-    if "Ras_y" in merged_df.columns:
-        merged_df["Ras"] = merged_df["Ras_y"].combine_first(merged_df["Ras_x"])
-    elif "Ras_x" in merged_df.columns:
-        merged_df.rename(columns={"Ras_x": "Ras"}, inplace=True)
+    # Status koppelen op basis van hoofd-stiercode
+    status_mapping = webshop_df.set_index("Hoofd Stiercode")["Status"].to_dict()
+    voorraad_df["Status"] = voorraad_df["Hoofd Stiercode"].map(status_mapping)
+    
+    # Samenvoegen op Stiercode
+    merged_df = voorraad_df.copy()
     
     # Vullen van missende waarden in de Ras-kolom
     merged_df["Ras"] = merged_df["Ras"].fillna("Onbekend")
-    
-    # Corrigeren van de Naam Stier-kolom (Correct toevoegen vóór verwijdering)
-    merged_df["Naam Stier"] = merged_df.get("naam stier_y", "").combine_first(merged_df.get("naam stier_x", ""))
-    
-    # Drop overbodige kolommen
-    merged_df.drop(columns=[col for col in ["Ras_x", "Ras_y", "naam stier_x", "naam stier_y"] if col in merged_df.columns], inplace=True)
     
     # Status en Voorraad normaliseren
     merged_df["Status"] = merged_df["Status"].astype(str).str.strip().str.upper()
@@ -116,4 +112,3 @@ if webshop_file and voorraad_file:
             st.subheader(titel)
             st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
             resultaten[titel[:31]] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]  # Sheetnaam max 31 tekens
-
