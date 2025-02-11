@@ -49,6 +49,13 @@ if webshop_file and voorraad_file:
     # Drop overbodige kolommen
     merged_df.drop(columns=[col for col in ["Ras_x", "Ras_y"] if col in merged_df.columns], inplace=True)
     
+    # Status en Voorraad normaliseren
+    merged_df["Status"] = merged_df["Status"].astype(str).str.strip().str.upper()
+    merged_df["Voorraad"] = merged_df["Voorraad"].fillna(0)
+    
+    # Debugging: Toon unieke statuswaarden
+    st.write("Unieke waarden in 'Status':", merged_df["Status"].unique())
+    
     # Unieke rassen ophalen
     unieke_rassen = merged_df["Ras"].dropna().unique()
     
@@ -58,17 +65,20 @@ if webshop_file and voorraad_file:
     
     # Functie om te bepalen in welke lijst een stier hoort
     def bepaal_status(row):
-        voorraad = row.get("Voorraad", None)
-        status = row.get("Status", None)
+        voorraad = row.get("Voorraad", 0)  # Alleen correcte voorraadkolom gebruiken
+        status = row.get("Status", "").strip().upper()
         ras = row.get("Ras", None)
         drempel = drempelwaarden.get(ras, default_drempel)
         
-        if pd.isna(voorraad) or pd.isna(status):
-            return "Toevoegen aan Webshop" if voorraad and voorraad > drempel else None
+        if status == "CONCEPT":
+            return "Concept: Toevoegen aan Webshop" if voorraad > drempel else "Concept: Lage voorraad"
         
-        if voorraad < drempel and status == "Active":
+        if status not in ["ACTIVE", "ARCHIVE"]:
+            return "Toevoegen aan Webshop" if voorraad > drempel else None
+        
+        if voorraad < drempel and status == "ACTIVE":
             return "Stieren met beperkte voorraad (op archief zetten)"
-        elif voorraad > drempel and status == "Archive":
+        elif voorraad > drempel and status == "ARCHIVE":
             return "Controle: Mag weer online (op actief zetten)"
         
         return None
@@ -76,12 +86,18 @@ if webshop_file and voorraad_file:
     # Status bepalen
     merged_df["Resultaat"] = merged_df.apply(bepaal_status, axis=1)
     
+    # Debugging: Controleer resultaten
+    st.write("Aantal per categorie:", merged_df["Resultaat"].value_counts())
+    
     # Resultaten tonen
     for categorie, titel in zip(["Stieren met beperkte voorraad (op archief zetten)",
                                  "Controle: Mag weer online (op actief zetten)",
-                                 "Toevoegen aan Webshop"],
+                                 "Toevoegen aan Webshop",
+                                 "Concept: Toevoegen aan Webshop",
+                                 "Concept: Lage voorraad"],
                                 ["Stieren met beperkte voorraad (op archief zetten)",
-                                 "Controlelijst: Mag weer online", "Toevoegen aan webshop"]):
+                                 "Controlelijst: Mag weer online", "Toevoegen aan webshop",
+                                 "Conceptstatus: Toevoegen aan webshop", "Conceptstatus: Lage voorraad"]):
         subset = merged_df[merged_df["Resultaat"] == categorie]
         if not subset.empty:
             st.subheader(titel)
