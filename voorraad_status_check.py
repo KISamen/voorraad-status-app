@@ -91,27 +91,28 @@ if webshop_file and voorraad_file:
     # Status bepalen
     merged_df["Resultaat"] = merged_df.apply(bepaal_status, axis=1)
     
-    # Gesekste stieren identificeren
-    gesekst_df = voorraad_df[voorraad_df["Stiercode"].astype(str).str.endswith(('-S', '-M'))].copy()
-    gesekst_df["Ras"] = gesekst_df["Ras"].fillna("Onbekend")  # Voorkom NaN waarden
-    gesekst_df["Voorraad"] = gesekst_df["Voorraad"].fillna(0)  # Voorkom NaN waarden
-    gesekst_df["Gesekst Resultaat"] = gesekst_df.apply(lambda row: "Gesekst beperkte voorraad" if row["Voorraad"] < drempelwaarden.get(row["Ras"], default_drempel) else "Gesekst voldoende voorraad", axis=1)
-    
     # Overzicht aanpassingen
     st.subheader("Overzicht aanpassingen")
     overzicht_data = {
         "Aantal stieren met beperkte voorraad": (merged_df["Resultaat"] == "Stieren met beperkte voorraad").sum(),
         "Aantal stieren mag weer online": (merged_df["Resultaat"] == "Voorraad weer voldoende").sum(),
-        "Aantal stieren toevoegen aan webshop": (merged_df["Resultaat"] == "Toevoegen aan Webshop").sum(),
-        "Gesekst beperkte voorraad": (gesekst_df["Gesekst Resultaat"] == "Gesekst beperkte voorraad").sum(),
-        "Gesekst voldoende voorraad": (gesekst_df["Gesekst Resultaat"] == "Gesekst voldoende voorraad").sum()
+        "Aantal stieren toevoegen aan webshop": (merged_df["Resultaat"] == "Toevoegen aan Webshop").sum()
     }
     overzicht_df = pd.DataFrame([overzicht_data])
     st.dataframe(overzicht_df)
     
-    # Weergave van gesekste stieren
-    for categorie in ["Gesekst beperkte voorraad", "Gesekst voldoende voorraad"]:
-        subset = gesekst_df[gesekst_df["Gesekst Resultaat"] == categorie]
+    # Opslaan van resultaten
+    resultaten = {}
+    for categorie, titel in zip(["Stieren met beperkte voorraad",
+                                 "Voorraad weer voldoende",
+                                 "Toevoegen aan Webshop",
+                                 "Concept: Toevoegen aan Webshop",
+                                 "Concept: Lage voorraad"],
+                                ["Beperkte voorraad",
+                                 "Mag weer online", "Toevoegen webshop",
+                                 "Concept toevoegen", "Concept lage voorraad"]):
+        subset = merged_df[merged_df["Resultaat"] == categorie].sort_values(by=["Ras"])
         if not subset.empty:
-            st.subheader(categorie)
-            st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad"]])
+            st.subheader(titel)
+            st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
+            resultaten[titel[:31]] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]  # Sheetnaam max 31 tekens
