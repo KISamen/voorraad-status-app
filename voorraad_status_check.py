@@ -9,7 +9,7 @@ st.title("Stieren Voorraadbeheer")
 # Drempelwaarden per ras beheren
 st.sidebar.header("Instellingen")
 drempelwaarden = {}
-default_drempel = 500
+default_drempel = 10  # Standaard op 10, tenzij specifiek aangepast
 
 # Upload bestanden
 st.sidebar.subheader("Upload Bestanden")
@@ -57,7 +57,10 @@ if webshop_file and voorraad_file:
     
     # Drempelwaarden per ras instellen
     for ras in unieke_rassen:
-        drempelwaarden[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=default_drempel)
+        if ras.lower() in ["Red Holstein", "Holstein zwartbont", "Jersey", "Belgisch Witblauw"]:
+            drempelwaarden[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=50)
+        else:
+            drempelwaarden[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=10)
     
     # Functie om te bepalen in welke lijst een stier hoort
     def bepaal_status(row):
