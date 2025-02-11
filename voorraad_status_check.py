@@ -20,8 +20,16 @@ if webshop_file and voorraad_file:
     voorraad_df = pd.read_excel(voorraad_file, sheet_name=0)  # Eerste sheet
     webshop_df = pd.read_excel(webshop_xls, sheet_name="Stieren")
     
+    # Strip kolomnamen om spaties te verwijderen
+    voorraad_df.columns = voorraad_df.columns.str.strip()
+    webshop_df.columns = webshop_df.columns.str.strip()
+    
+    # Debugging: Toon de werkelijke kolomnamen
+    st.write("Kolomnamen voorraad_df:", voorraad_df.columns.tolist())
+    st.write("Kolomnamen webshop_df:", webshop_df.columns.tolist())
+    
     # Data voorbereiden
-    voorraad_df = voorraad_df.rename(columns={"Nr.": "Stiercode", "X": "Ras", "F": "Voorraad"})
+    voorraad_df = voorraad_df.rename(columns={"Nr": "Stiercode", "X": "Ras", "F": "Voorraad"})
     webshop_df = webshop_df.rename(columns={"F": "Stiercode", "C": "Ras", "G": "Status"})
     
     # Samenvoegen op Stiercode
