@@ -40,15 +40,17 @@ if webshop_file and voorraad_file:
     merged_df = pd.merge(voorraad_df, webshop_df, on="Stiercode", how="outer")
     st.write("Kolomnamen merged_df:", merged_df.columns.tolist())
     
-    # Unieke rassen ophalen met alternatieve kolomnamencontrole
-    mogelijke_ras_kolommen = [col for col in merged_df.columns if "ras" in col.lower()]
-    if mogelijke_ras_kolommen:
-        juiste_ras_kolom = mogelijke_ras_kolommen[0]  # Eerste juiste kolom nemen
-        merged_df.rename(columns={juiste_ras_kolom: "Ras"}, inplace=True)
-        unieke_rassen = merged_df["Ras"].dropna().unique()
-    else:
-        st.error("Fout: 'Ras' kolom niet gevonden in merged_df. Controleer of de juiste kolommen correct zijn ingelezen.")
-        unieke_rassen = []
+    # Corrigeren van de Ras-kolom (Ras_x en Ras_y samenvoegen)
+    if "Ras_y" in merged_df.columns:
+        merged_df["Ras"] = merged_df["Ras_y"].combine_first(merged_df["Ras_x"])
+    elif "Ras_x" in merged_df.columns:
+        merged_df.rename(columns={"Ras_x": "Ras"}, inplace=True)
+    
+    # Drop overbodige kolommen
+    merged_df.drop(columns=[col for col in ["Ras_x", "Ras_y"] if col in merged_df.columns], inplace=True)
+    
+    # Unieke rassen ophalen
+    unieke_rassen = merged_df["Ras"].dropna().unique()
     
     # Drempelwaarden per ras instellen
     for ras in unieke_rassen:
