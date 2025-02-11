@@ -50,8 +50,8 @@ if webshop_file and voorraad_file:
     # Stiercode als string weergeven zonder komma's
     merged_df["Stiercode"] = merged_df["Stiercode"].astype(str).str.strip()
     
-    # Unieke rassen ophalen
-    unieke_rassen = merged_df["Ras"].dropna().unique()
+    # Unieke rassen ophalen en sorteren
+    unieke_rassen = sorted(merged_df["Ras"].dropna().unique())
     
     # Drempelwaarden per ras instellen
     for ras in unieke_rassen:
@@ -89,7 +89,7 @@ if webshop_file and voorraad_file:
                                 ["Stieren met beperkte voorraad (op archief zetten)",
                                  "Controlelijst: Mag weer online", "Toevoegen aan webshop",
                                  "Conceptstatus: Toevoegen aan webshop", "Conceptstatus: Lage voorraad"]):
-        subset = merged_df[merged_df["Resultaat"] == categorie]
+        subset = merged_df[merged_df["Resultaat"] == categorie].sort_values(by=["Ras"])
         if not subset.empty:
             st.subheader(titel)
             st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
