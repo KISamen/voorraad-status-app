@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from io import BytesIO
 
 # Streamlit app configureren
 st.title("Stieren Voorraadbeheer")
@@ -80,7 +81,8 @@ if webshop_file and voorraad_file:
     # Status bepalen
     merged_df["Resultaat"] = merged_df.apply(bepaal_status, axis=1)
     
-    # Resultaten tonen
+    # Opslaan van resultaten
+    resultaten = {}
     for categorie, titel in zip(["Stieren met beperkte voorraad (op archief zetten)",
                                  "Voorraad weer voldoende (op actief zetten)",
                                  "Toevoegen aan Webshop",
@@ -93,3 +95,13 @@ if webshop_file and voorraad_file:
         if not subset.empty:
             st.subheader(titel)
             st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
+            resultaten[titel] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]
+    
+    # Excel-downloadknop
+    if resultaten:
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            for sheet_name, df in resultaten.items():
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+        output.seek(0)
+        st.download_button(label="Download Excel-bestand", data=output, file_name="Stieren_Voorraad_Resultaten.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
