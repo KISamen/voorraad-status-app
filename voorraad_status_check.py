@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 from io import BytesIO
+import re
 
 # Streamlit app configureren
 st.title("Stieren Voorraadbeheer")
@@ -72,9 +73,9 @@ if webshop_file and voorraad_file:
             return "Toevoegen aan Webshop" if voorraad > drempel else None
         
         if voorraad < drempel and status == "ACTIVE":
-            return "Stieren met beperkte voorraad (op archief zetten)"
+            return "Stieren met beperkte voorraad"
         elif voorraad > drempel and status == "ARCHIVE":
-            return "Voorraad weer voldoende (op actief zetten)"
+            return "Voorraad weer voldoende"
         
         return None
     
@@ -83,25 +84,26 @@ if webshop_file and voorraad_file:
     
     # Opslaan van resultaten
     resultaten = {}
-    for categorie, titel in zip(["Stieren met beperkte voorraad (op archief zetten)",
-                                 "Voorraad weer voldoende (op actief zetten)",
+    for categorie, titel in zip(["Stieren met beperkte voorraad",
+                                 "Voorraad weer voldoende",
                                  "Toevoegen aan Webshop",
                                  "Concept: Toevoegen aan Webshop",
                                  "Concept: Lage voorraad"],
-                                ["Stieren met beperkte voorraad (op archief zetten)",
-                                 "Controlelijst: Mag weer online", "Toevoegen aan webshop",
-                                 "Conceptstatus: Toevoegen aan webshop", "Conceptstatus: Lage voorraad"]):
+                                ["Beperkte voorraad",
+                                 "Mag weer online", "Toevoegen webshop",
+                                 "Concept toevoegen", "Concept lage voorraad"]):
         subset = merged_df[merged_df["Resultaat"] == categorie].sort_values(by=["Ras"])
         if not subset.empty:
             st.subheader(titel)
             st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
-            resultaten[titel] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]
+            resultaten[titel[:31]] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]  # Sheetnaam max 31 tekens
     
-    # Excel-downloadknop zonder xlsxwriter
+    # Excel-downloadknop zonder foutmeldingen
     if resultaten:
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             for sheet_name, df in resultaten.items():
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                clean_sheet_name = re.sub(r'[^A-Za-z0-9 ]', '', sheet_name)[:31]  # Speciale tekens verwijderen en max 31 tekens
+                df.to_excel(writer, sheet_name=clean_sheet_name, index=False)
         output.seek(0)
         st.download_button(label="Download Excel-bestand", data=output, file_name="Stieren_Voorraad_Resultaten.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
