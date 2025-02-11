@@ -29,8 +29,8 @@ if webshop_file and voorraad_file:
     st.write("Kolomnamen webshop_df:", webshop_df.columns.tolist())
     
     # Kolomnamen mappen inclusief varianten
-    voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras"}, inplace=True)
-    webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status"}, inplace=True)
+    voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras", "naam stier": "Naam Stier"}, inplace=True)
+    webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status", "naam stier": "Naam Stier"}, inplace=True)
     
     # Debugging: Toon kolomnamen na hernoemen
     st.write("Kolomnamen na hernoemen - voorraad_df:", voorraad_df.columns.tolist())
@@ -101,4 +101,4 @@ if webshop_file and voorraad_file:
         subset = merged_df[merged_df["Resultaat"] == categorie]
         if not subset.empty:
             st.subheader(titel)
-            st.dataframe(subset[["Stiercode", "Ras", "Voorraad", "Status"]])
+            st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
