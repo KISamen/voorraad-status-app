@@ -116,4 +116,3 @@ if webshop_file and voorraad_file:
             st.subheader(titel)
             st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
             resultaten[titel[:31]] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]  # Sheetnaam max 31 tekens
-
