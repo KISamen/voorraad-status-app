@@ -47,6 +47,9 @@ if webshop_file and voorraad_file:
     merged_df["Status"] = merged_df["Status"].astype(str).str.strip().str.upper()
     merged_df["Voorraad"] = merged_df["Voorraad"].fillna(0)
     
+    # Stiercode als string weergeven zonder komma's
+    merged_df["Stiercode"] = merged_df["Stiercode"].astype(str).str.strip()
+    
     # Unieke rassen ophalen
     unieke_rassen = merged_df["Ras"].dropna().unique()
     
