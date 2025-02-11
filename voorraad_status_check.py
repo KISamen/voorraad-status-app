@@ -97,10 +97,10 @@ if webshop_file and voorraad_file:
             st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
             resultaten[titel] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]
     
-    # Excel-downloadknop
+    # Excel-downloadknop zonder xlsxwriter
     if resultaten:
         output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
             for sheet_name, df in resultaten.items():
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
         output.seek(0)
