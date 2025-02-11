@@ -40,8 +40,11 @@ if webshop_file and voorraad_file:
     merged_df = pd.merge(voorraad_df, webshop_df, on="Stiercode", how="outer")
     st.write("Kolomnamen merged_df:", merged_df.columns.tolist())
     
-    # Unieke rassen ophalen
-    if "Ras" in merged_df.columns:
+    # Unieke rassen ophalen met alternatieve kolomnamencontrole
+    mogelijke_ras_kolommen = [col for col in merged_df.columns if "ras" in col.lower()]
+    if mogelijke_ras_kolommen:
+        juiste_ras_kolom = mogelijke_ras_kolommen[0]  # Eerste juiste kolom nemen
+        merged_df.rename(columns={juiste_ras_kolom: "Ras"}, inplace=True)
         unieke_rassen = merged_df["Ras"].dropna().unique()
     else:
         st.error("Fout: 'Ras' kolom niet gevonden in merged_df. Controleer of de juiste kolommen correct zijn ingelezen.")
