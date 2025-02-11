@@ -47,8 +47,10 @@ if webshop_file and voorraad_file:
         merged_df.rename(columns={"Ras_x": "Ras"}, inplace=True)
     
     # Corrigeren van de Naam Stier-kolom
-    if "naam stier_y" in merged_df.columns:
-        merged_df["Naam Stier"] = merged_df["naam stier_y"].combine_first(merged_df.get("naam stier_x"))
+    if "naam stier_y" in merged_df.columns and "naam stier_x" in merged_df.columns:
+        merged_df["Naam Stier"] = merged_df["naam stier_y"].combine_first(merged_df["naam stier_x"])
+    elif "naam stier_y" in merged_df.columns:
+        merged_df.rename(columns={"naam stier_y": "Naam Stier"}, inplace=True)
     elif "naam stier_x" in merged_df.columns:
         merged_df.rename(columns={"naam stier_x": "Naam Stier"}, inplace=True)
     
