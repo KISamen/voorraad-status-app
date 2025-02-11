@@ -97,7 +97,7 @@ if webshop_file and voorraad_file:
     
     # Resultaten tonen
     for categorie, titel in zip(["Stieren met beperkte voorraad (op archief zetten)",
-                                 "Controle: Mag weer online (op actief zetten)",
+                                 "Voorraad weer voldoende (op actief zetten)",
                                  "Toevoegen aan Webshop",
                                  "Concept: Toevoegen aan Webshop",
                                  "Concept: Lage voorraad"],
