@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-from io import BytesIO
 import re
 
 # Streamlit app configureren
@@ -24,74 +23,80 @@ if webshop_file and voorraad_file:
     webshop_xls = pd.ExcelFile(webshop_file)
     voorraad_df = pd.read_excel(voorraad_file, sheet_name=0)  # Eerste sheet
     webshop_df = pd.read_excel(webshop_xls, sheet_name="Stieren")
-    
-    # Strip kolomnamen om spaties te verwijderen en naar kleine letters converteren
+    variaties_df = pd.read_excel(webshop_xls, sheet_name="Artikelvariaties")
+
+    # Strip kolomnamen en converteren naar kleine letters
     voorraad_df.columns = voorraad_df.columns.str.strip().str.lower()
     webshop_df.columns = webshop_df.columns.str.strip().str.lower()
-    
-    # Kolomnamen mappen inclusief varianten
-    voorraad_df.rename(columns={"nr.": "Stiercode", "beschikbare voorraad": "Voorraad", "rasomschrijving": "Ras", "naam stier": "naam stier"}, inplace=True)
-    webshop_df.rename(columns={"stiercode nl / ki code": "Stiercode", "rasomschrijving": "Ras", "status": "Status", "naam stier": "naam stier"}, inplace=True)
-    
-    # Samenvoegen op Stiercode
-    merged_df = pd.merge(voorraad_df, webshop_df, on="Stiercode", how="outer")
-    
-    # Corrigeren van de Ras-kolom (Ras_x en Ras_y samenvoegen)
-    if "Ras_y" in merged_df.columns:
-        merged_df["Ras"] = merged_df["Ras_y"].combine_first(merged_df["Ras_x"])
-    elif "Ras_x" in merged_df.columns:
-        merged_df.rename(columns={"Ras_x": "Ras"}, inplace=True)
-    
-    # Vullen van missende waarden in de Ras-kolom
-    merged_df["Ras"] = merged_df["Ras"].fillna("Onbekend")
-    
-    # Corrigeren van de Naam Stier-kolom (Correct toevoegen vóór verwijdering)
-    merged_df["Naam Stier"] = merged_df.get("naam stier_y", "").combine_first(merged_df.get("naam stier_x", ""))
-    
-    # Drop overbodige kolommen
-    merged_df.drop(columns=[col for col in ["Ras_x", "Ras_y", "naam stier_x", "naam stier_y"] if col in merged_df.columns], inplace=True)
-    
-    # Status en Voorraad normaliseren
-    merged_df["Status"] = merged_df["Status"].astype(str).str.strip().str.upper()
-    merged_df["Voorraad"] = merged_df["Voorraad"].fillna(0)
-    
-    # Stiercode als string weergeven zonder komma's
-    merged_df["Stiercode"] = merged_df["Stiercode"].astype(str).str.strip()
-    
-    # Unieke rassen ophalen en sorteren
-    unieke_rassen = sorted(merged_df["Ras"].dropna().unique())
-    
-    # Drempelwaarden per ras instellen
+    variaties_df.columns = variaties_df.columns.str.strip().str.lower()
+
+    # Kolommen hernoemen voor eenduidigheid
+    voorraad_df.rename(columns={"nr.": "stiercode", "beschikbare voorraad": "voorraad", "rasomschrijving": "ras"}, inplace=True)
+    webshop_df.rename(columns={"stiercode nl / ki code": "stiercode", "rasomschrijving": "ras", "status": "status"}, inplace=True)
+    variaties_df.rename(columns={"stiercode": "stiercode", "nederland": "artikelvariaties_nl", "voorraad": "voorraad_variatie"}, inplace=True)
+
+    # Samenvoegen van de voorraad en webshop data
+    merged_df = pd.merge(voorraad_df, webshop_df, on="stiercode", how="outer")
+
+    # Ras en naam samenvoegen als ze dubbel voorkomen
+    if "ras_y" in merged_df.columns:
+        merged_df["ras"] = merged_df["ras_y"].combine_first(merged_df["ras_x"])
+        merged_df.drop(columns=["ras_x", "ras_y"], inplace=True)
+
+    # Missende raswaarden invullen
+    merged_df["ras"] = merged_df["ras"].fillna("Onbekend")
+
+    # Voorraad normaliseren en numeriek maken
+    merged_df["voorraad"] = pd.to_numeric(merged_df["voorraad"], errors='coerce').fillna(0)
+    variaties_df["voorraad_variatie"] = pd.to_numeric(variaties_df["voorraad_variatie"], errors='coerce').fillna(0)
+
+    # Unieke rassen ophalen en drempelwaarden instellen
+    unieke_rassen = sorted(merged_df["ras"].dropna().unique())
     for ras in unieke_rassen:
         if ras.lower().strip() in speciale_rassen:
             drempelwaarden[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=50)
         else:
             drempelwaarden[ras] = st.sidebar.number_input(f"Drempelwaarde voor {ras}", min_value=0, value=10)
-    
-    # Functie om te bepalen in welke lijst een stier hoort
+
+    # Functie om de status van een stier te bepalen
     def bepaal_status(row):
-        voorraad = row.get("Voorraad", 0)  # Alleen correcte voorraadkolom gebruiken
-        status = row.get("Status", "").strip().upper()
-        ras = row.get("Ras", "Onbekend").strip().lower()
+        stiercode = row["stiercode"]
+        voorraad = row["voorraad"]
+        status = row["status"]
+        ras = row["ras"].strip().lower()
         drempel = drempelwaarden.get(ras, default_drempel)
-        
+
+        # Check of er een variatie bestaat (-m of -s)
+        if re.search(r"-[ms]$", stiercode):
+            variatie_info = variaties_df[variaties_df["stiercode"] == stiercode]
+
+            if not variatie_info.empty:
+                artikelvariatie_nl = variatie_info["artikelvariaties_nl"].values[0]
+                voorraad_variatie = variatie_info["voorraad_variatie"].values[0]
+
+                if voorraad_variatie < drempel and artikelvariatie_nl == "Ja":
+                    return "Beperkte voorraad gesekst sperma"
+                elif voorraad_variatie > drempel and artikelvariatie_nl == "Nee":
+                    return "Mag weer online gesekst sperma"
+
+        # Reguliere voorraadcontrole
         if status == "CONCEPT":
             return "Concept: Toevoegen aan Webshop" if voorraad > drempel else "Concept: Lage voorraad"
-        
+
         if status not in ["ACTIVE", "ARCHIVE"]:
             return "Toevoegen aan Webshop" if voorraad > drempel else None
-        
+
         if voorraad < drempel and status == "ACTIVE":
             return "Stieren met beperkte voorraad"
         elif voorraad > drempel and status == "ARCHIVE":
             return "Voorraad weer voldoende"
-        
+
         return None
-    
+
     # Status bepalen
     merged_df["Resultaat"] = merged_df.apply(bepaal_status, axis=1)
-    
-    # Overzicht aanpassingen
+
+    # Overzicht van aanpassingen tonen
     st.subheader("Overzicht aanpassingen")
     overzicht_data = {
         "Aantal stieren met beperkte voorraad": (merged_df["Resultaat"] == "Stieren met beperkte voorraad").sum(),
@@ -100,19 +105,30 @@ if webshop_file and voorraad_file:
     }
     overzicht_df = pd.DataFrame([overzicht_data])
     st.dataframe(overzicht_df)
-    
-    # Opslaan van resultaten
-    resultaten = {}
-    for categorie, titel in zip(["Stieren met beperkte voorraad",
-                                 "Voorraad weer voldoende",
-                                 "Toevoegen aan Webshop",
-                                 "Concept: Toevoegen aan Webshop",
-                                 "Concept: Lage voorraad"],
-                                ["Beperkte voorraad",
-                                 "Mag weer online", "Toevoegen webshop",
-                                 "Concept toevoegen", "Concept lage voorraad"]):
-        subset = merged_df[merged_df["Resultaat"] == categorie].sort_values(by=["Ras"])
+
+    # Resultaten tonen per categorie
+    resultaten = {
+        "Beperkte voorraad gesekst sperma": "Stieren met beperkte voorraad",
+        "Mag weer online gesekst sperma": "Mag weer online gesekst sperma",
+        "Toevoegen aan Webshop": "Toevoegen aan Webshop",
+        "Concept: Toevoegen aan Webshop": "Concept: Toevoegen aan Webshop",
+        "Concept: Lage voorraad": "Concept: Lage voorraad"
+    }
+
+    for titel, categorie in resultaten.items():
+        subset = merged_df[merged_df["Resultaat"] == categorie].sort_values(by=["ras"])
         if not subset.empty:
             st.subheader(titel)
-            st.dataframe(subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]])
-            resultaten[titel[:31]] = subset[["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"]]  # Sheetnaam max 31 tekens
+            st.dataframe(subset[["stiercode", "ras", "voorraad", "status"]])
+
+    # Exportknop toevoegen
+    if st.button("Download resultaten als Excel"):
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+            for titel, categorie in resultaten.items():
+                subset = merged_df[merged_df["Resultaat"] == categorie]
+                if not subset.empty:
+                    subset.to_excel(writer, sheet_name=titel[:31], index=False)
+        output.seek(0)
+        st.download_button("Klik hier om te downloaden", output, file_name="Voorraadbeheer_resultaten.xlsx")
+
