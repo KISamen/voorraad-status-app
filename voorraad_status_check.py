@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import re
+from io import BytesIO
 
 # Streamlit app configureren
 st.title("Stieren Voorraadbeheer")
@@ -8,9 +9,9 @@ st.title("Stieren Voorraadbeheer")
 # Drempelwaarden per ras beheren
 st.sidebar.header("Instellingen")
 drempelwaarden = {}
-default_drempel = 10  # Standaard op 10, tenzij specifiek aangepast
+default_drempel = 10  # Standaardwaarde
 
-# Rassen waarvoor de drempelwaarde 50 moet zijn
+# Specifieke rassen waarvoor de drempelwaarde 50 moet zijn
 speciale_rassen = {"red holstein", "holstein zwartbont", "jersey", "belgisch witblauw"}
 
 # Upload bestanden
@@ -20,10 +21,14 @@ voorraad_file = st.sidebar.file_uploader("Upload Beschikbare Voorraad Lablocatie
 
 if webshop_file and voorraad_file:
     # Inladen van de bestanden
-    webshop_xls = pd.ExcelFile(webshop_file)
-    voorraad_df = pd.read_excel(voorraad_file, sheet_name=0)  # Eerste sheet
-    webshop_df = pd.read_excel(webshop_xls, sheet_name="Stieren")
-    variaties_df = pd.read_excel(webshop_xls, sheet_name="Artikelvariaties")
+    try:
+        webshop_xls = pd.ExcelFile(webshop_file)
+        voorraad_df = pd.read_excel(voorraad_file, sheet_name=0)  # Eerste sheet
+        webshop_df = pd.read_excel(webshop_xls, sheet_name="Stieren")
+        variaties_df = pd.read_excel(webshop_xls, sheet_name="Artikelvariaties")
+    except Exception as e:
+        st.error(f"Fout bij het inlezen van de bestanden: {e}")
+        st.stop()
 
     # Strip kolomnamen en converteren naar kleine letters
     voorraad_df.columns = voorraad_df.columns.str.strip().str.lower()
@@ -38,16 +43,17 @@ if webshop_file and voorraad_file:
     # Samenvoegen van de voorraad en webshop data
     merged_df = pd.merge(voorraad_df, webshop_df, on="stiercode", how="outer")
 
-    # Ras en naam samenvoegen als ze dubbel voorkomen
-    if "ras_y" in merged_df.columns:
-        merged_df["ras"] = merged_df["ras_y"].combine_first(merged_df["ras_x"])
-        merged_df.drop(columns=["ras_x", "ras_y"], inplace=True)
+    # Verwijder dubbele kolomnamen
+    merged_df = merged_df.loc[:, ~merged_df.columns.duplicated()]
 
-    # Missende raswaarden invullen
-    merged_df["ras"] = merged_df["ras"].fillna("Onbekend")
+    # Controleer of "voorraad" daadwerkelijk als kolom aanwezig is
+    if "voorraad" in merged_df.columns:
+        merged_df["voorraad"] = pd.to_numeric(merged_df["voorraad"], errors="coerce").fillna(0)
+    else:
+        st.error("Kolom 'voorraad' ontbreekt in de dataset. Controleer de invoerbestanden.")
+        st.stop()
 
-    # Voorraad normaliseren en numeriek maken
-    merged_df["voorraad"] = pd.to_numeric(merged_df["voorraad"], errors='coerce').fillna(0)
+    # Voorraad van variaties ook numeriek maken
     variaties_df["voorraad_variatie"] = pd.to_numeric(variaties_df["voorraad_variatie"], errors='coerce').fillna(0)
 
     # Unieke rassen ophalen en drempelwaarden instellen
