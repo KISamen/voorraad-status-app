@@ -53,7 +53,8 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
                 elif voorraad > drempel and nederland_status == "Nee":
                     voldoende_gesekst.append([stiercode, naam_stier, ras, voorraad, nederland_status])
             else:
-                toevoegen_gesekst.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
+                if voorraad > drempel:
+                    toevoegen_gesekst.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
     
     return beperkt_conventioneel, voldoende_conventioneel, toevoegen_conventioneel, beperkt_gesekst, voldoende_gesekst, toevoegen_gesekst
 
