@@ -57,13 +57,19 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
     
     return beperkt_conventioneel, voldoende_conventioneel, toevoegen_conventioneel, beperkt_gesekst, voldoende_gesekst, toevoegen_gesekst
 
-def save_to_excel(data, filename):
+def save_to_excel(data):
     output = BytesIO()
     df = pd.DataFrame(data, columns=["Stiercode", "Naam Stier", "Voorraad", "Status"])
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Sheet1")
     output.seek(0)
     return output
+
+def display_and_download(title, data, filename):
+    df = pd.DataFrame(data, columns=["Stiercode", "Naam Stier", "Voorraad", "Status"])
+    st.write(f"## {title}")
+    st.dataframe(df)
+    st.download_button(f"Download {title}", save_to_excel(data), filename)
 
 def main():
     st.title("Voorraad Checker")
@@ -95,12 +101,12 @@ def main():
             (beperkt_con, voldoende_con, toevoegen_con, 
             beperkt_ges, voldoende_ges, toevoegen_ges) = determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden)
             
-            st.download_button("Download Beperkte Conventioneel", save_to_excel(beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx"), "Beperkte_Voorraad_Conventioneel.xlsx")
-            st.download_button("Download Voldoende Conventioneel", save_to_excel(voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx"), "Voldoende_Voorraad_Conventioneel.xlsx")
-            st.download_button("Download Toevoegen Conventioneel", save_to_excel(toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx"), "Toevoegen_Website_Conventioneel.xlsx")
-            st.download_button("Download Beperkte Gesekst", save_to_excel(beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx"), "Beperkte_Voorraad_Gesekst.xlsx")
-            st.download_button("Download Voldoende Gesekst", save_to_excel(voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx"), "Voldoende_Voorraad_Gesekst.xlsx")
-            st.download_button("Download Toevoegen Gesekst", save_to_excel(toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx"), "Toevoegen_Website_Gesekst.xlsx")
+            display_and_download("Beperkte voorraad Conventioneel", beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx")
+            display_and_download("Voldoende voorraad Conventioneel", voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx")
+            display_and_download("Toevoegen website Conventioneel", toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx")
+            display_and_download("Beperkte voorraad Gesekst", beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx")
+            display_and_download("Voldoende voorraad Gesekst", voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx")
+            display_and_download("Toevoegen website Gesekst", toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx")
     
 if __name__ == "__main__":
     main()
