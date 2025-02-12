@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from io import BytesIO
 
 def load_data(uploaded_voorraden, uploaded_webshop):
     if uploaded_voorraden is not None and uploaded_webshop is not None:
@@ -55,10 +56,13 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
     
     return beperkt_conventioneel, voldoende_conventioneel, toevoegen_conventioneel, beperkt_gesekst, voldoende_gesekst, toevoegen_gesekst
 
-def save_to_excel(data, filename):
+def save_to_excel(data):
+    output = BytesIO()
     df = pd.DataFrame(data, columns=["Stiercode"])
-    df.to_excel(filename, index=False)
-    return filename
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Sheet1")
+    output.seek(0)
+    return output
 
 def main():
     st.title("Voorraad Checker")
@@ -92,27 +96,27 @@ def main():
             
             st.write("## Beperkte voorraad Conventioneel")
             st.write(beperkt_con)
-            st.download_button("Download", save_to_excel(beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx"))
+            st.download_button("Download Beperkte Conventioneel", save_to_excel(beperkt_con), "Beperkte_Voorraad_Conventioneel.xlsx")
             
             st.write("## Voldoende voorraad Conventioneel")
             st.write(voldoende_con)
-            st.download_button("Download", save_to_excel(voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx"))
+            st.download_button("Download Voldoende Conventioneel", save_to_excel(voldoende_con), "Voldoende_Voorraad_Conventioneel.xlsx")
             
             st.write("## Toevoegen website Conventioneel")
             st.write(toevoegen_con)
-            st.download_button("Download", save_to_excel(toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx"))
+            st.download_button("Download Toevoegen Conventioneel", save_to_excel(toevoegen_con), "Toevoegen_Website_Conventioneel.xlsx")
             
             st.write("## Beperkte voorraad Gesekst")
             st.write(beperkt_ges)
-            st.download_button("Download", save_to_excel(beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx"))
+            st.download_button("Download Beperkte Gesekst", save_to_excel(beperkt_ges), "Beperkte_Voorraad_Gesekst.xlsx")
             
             st.write("## Voldoende voorraad Gesekst")
             st.write(voldoende_ges)
-            st.download_button("Download", save_to_excel(voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx"))
+            st.download_button("Download Voldoende Gesekst", save_to_excel(voldoende_ges), "Voldoende_Voorraad_Gesekst.xlsx")
             
             st.write("## Toevoegen website Gesekst")
             st.write(toevoegen_ges)
-            st.download_button("Download", save_to_excel(toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx"))
+            st.download_button("Download Toevoegen Gesekst", save_to_excel(toevoegen_ges), "Toevoegen_Website_Gesekst.xlsx")
     
 if __name__ == "__main__":
     main()
