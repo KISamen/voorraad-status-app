@@ -1,18 +1,17 @@
 import streamlit as st
 import pandas as pd
 
-def load_data():
-    file_voorraden = "Beschikbare voorraad lablocaties.xlsx"
-    file_webshop = "Status Webshop.xlsx"
-    
-    xls_voorraden = pd.ExcelFile(file_voorraden)
-    xls_webshop = pd.ExcelFile(file_webshop)
-    
-    df_voorraden = pd.read_excel(xls_voorraden, sheet_name="Blad1")
-    df_stieren = pd.read_excel(xls_webshop, sheet_name="Stieren")
-    df_artikelvariaties = pd.read_excel(xls_webshop, sheet_name="Artikelvariaties")
-    
-    return df_voorraden, df_stieren, df_artikelvariaties
+def load_data(uploaded_voorraden, uploaded_webshop):
+    if uploaded_voorraden is not None and uploaded_webshop is not None:
+        xls_voorraden = pd.ExcelFile(uploaded_voorraden)
+        xls_webshop = pd.ExcelFile(uploaded_webshop)
+        
+        df_voorraden = pd.read_excel(xls_voorraden, sheet_name="Blad1")
+        df_stieren = pd.read_excel(xls_webshop, sheet_name="Stieren")
+        df_artikelvariaties = pd.read_excel(xls_webshop, sheet_name="Artikelvariaties")
+        
+        return df_voorraden, df_stieren, df_artikelvariaties
+    return None, None, None
 
 def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden):
     beperkt_conventioneel = []
@@ -64,52 +63,56 @@ def save_to_excel(data, filename):
 def main():
     st.title("Voorraad Checker")
     
-    drempelwaarden = {
-        "Holstein zwartbont": 50,
-        "Red Holstein": 50,
-        "Belgisch Witblauw": 50,
-        "Jersey": 50
-    }
+    uploaded_voorraden = st.file_uploader("Upload 'Beschikbare voorraad lablocaties.xlsx'", type=["xlsx"])
+    uploaded_webshop = st.file_uploader("Upload 'Status Webshop.xlsx'", type=["xlsx"])
     
-    st.sidebar.header("Drempelwaarden per ras")
-    for ras in ["Holstein zwartbont", "Red Holstein", "Belgisch Witblauw", "Jersey"]:
-        drempelwaarden[ras] = st.sidebar.number_input(f"Drempel voor {ras}", min_value=1, value=50)
-    overige_drempel = st.sidebar.number_input("Drempel voor overige rassen", min_value=1, value=10)
-    
-    df_voorraden, df_stieren, df_artikelvariaties = load_data()
-    
-    unieke_rassen = df_voorraden['Rasomschrijving'].unique()
-    for ras in unieke_rassen:
-        if ras not in drempelwaarden:
-            drempelwaarden[ras] = overige_drempel
-    
-    if st.button("Check voorraad"):
-        (beperkt_con, voldoende_con, toevoegen_con, 
-         beperkt_ges, voldoende_ges, toevoegen_ges) = determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden)
+    if uploaded_voorraden and uploaded_webshop:
+        drempelwaarden = {
+            "Holstein zwartbont": 50,
+            "Red Holstein": 50,
+            "Belgisch Witblauw": 50,
+            "Jersey": 50
+        }
         
-        st.write("## Beperkte voorraad Conventioneel")
-        st.write(beperkt_con)
-        st.download_button("Download", save_to_excel(beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx"))
+        st.sidebar.header("Drempelwaarden per ras")
+        for ras in ["Holstein zwartbont", "Red Holstein", "Belgisch Witblauw", "Jersey"]:
+            drempelwaarden[ras] = st.sidebar.number_input(f"Drempel voor {ras}", min_value=1, value=50)
+        overige_drempel = st.sidebar.number_input("Drempel voor overige rassen", min_value=1, value=10)
         
-        st.write("## Voldoende voorraad Conventioneel")
-        st.write(voldoende_con)
-        st.download_button("Download", save_to_excel(voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx"))
+        df_voorraden, df_stieren, df_artikelvariaties = load_data(uploaded_voorraden, uploaded_webshop)
         
-        st.write("## Toevoegen website Conventioneel")
-        st.write(toevoegen_con)
-        st.download_button("Download", save_to_excel(toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx"))
+        unieke_rassen = df_voorraden['Rasomschrijving'].unique()
+        for ras in unieke_rassen:
+            if ras not in drempelwaarden:
+                drempelwaarden[ras] = overige_drempel
         
-        st.write("## Beperkte voorraad Gesekst")
-        st.write(beperkt_ges)
-        st.download_button("Download", save_to_excel(beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx"))
-        
-        st.write("## Voldoende voorraad Gesekst")
-        st.write(voldoende_ges)
-        st.download_button("Download", save_to_excel(voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx"))
-        
-        st.write("## Toevoegen website Gesekst")
-        st.write(toevoegen_ges)
-        st.download_button("Download", save_to_excel(toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx"))
+        if st.button("Check voorraad"):
+            (beperkt_con, voldoende_con, toevoegen_con, 
+            beperkt_ges, voldoende_ges, toevoegen_ges) = determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden)
+            
+            st.write("## Beperkte voorraad Conventioneel")
+            st.write(beperkt_con)
+            st.download_button("Download", save_to_excel(beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx"))
+            
+            st.write("## Voldoende voorraad Conventioneel")
+            st.write(voldoende_con)
+            st.download_button("Download", save_to_excel(voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx"))
+            
+            st.write("## Toevoegen website Conventioneel")
+            st.write(toevoegen_con)
+            st.download_button("Download", save_to_excel(toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx"))
+            
+            st.write("## Beperkte voorraad Gesekst")
+            st.write(beperkt_ges)
+            st.download_button("Download", save_to_excel(beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx"))
+            
+            st.write("## Voldoende voorraad Gesekst")
+            st.write(voldoende_ges)
+            st.download_button("Download", save_to_excel(voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx"))
+            
+            st.write("## Toevoegen website Gesekst")
+            st.write(toevoegen_ges)
+            st.download_button("Download", save_to_excel(toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx"))
     
 if __name__ == "__main__":
     main()
