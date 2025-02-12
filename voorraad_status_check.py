@@ -38,35 +38,35 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
             if not status_row.empty:
                 status = status_row.iloc[0]['Status']
                 if voorraad < drempel and status == "ACTIVE":
-                    beperkt_conventioneel.append([stiercode, naam_stier, voorraad, status])
+                    beperkt_conventioneel.append([stiercode, naam_stier, ras, voorraad, status])
                 elif voorraad > drempel and status == "ARCHIVE":
-                    voldoende_conventioneel.append([stiercode, naam_stier, voorraad, status])
+                    voldoende_conventioneel.append([stiercode, naam_stier, ras, voorraad, status])
             else:
-                toevoegen_conventioneel.append([stiercode, naam_stier, voorraad, "Niet in webshop"])
+                toevoegen_conventioneel.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
         else:
             # Gesekst
             artikel_row = df_artikelvariaties[df_artikelvariaties['Nummer'].astype(str) == stiercode]
             if not artikel_row.empty:
                 nederland_status = artikel_row.iloc[0]['Nederland']
                 if voorraad < drempel and nederland_status == "Ja":
-                    beperkt_gesekst.append([stiercode, naam_stier, voorraad, nederland_status])
+                    beperkt_gesekst.append([stiercode, naam_stier, ras, voorraad, nederland_status])
                 elif voorraad > drempel and nederland_status == "Nee":
-                    voldoende_gesekst.append([stiercode, naam_stier, voorraad, nederland_status])
+                    voldoende_gesekst.append([stiercode, naam_stier, ras, voorraad, nederland_status])
             else:
-                toevoegen_gesekst.append([stiercode, naam_stier, voorraad, "Niet in webshop"])
+                toevoegen_gesekst.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
     
     return beperkt_conventioneel, voldoende_conventioneel, toevoegen_conventioneel, beperkt_gesekst, voldoende_gesekst, toevoegen_gesekst
 
 def save_to_excel(data):
     output = BytesIO()
-    df = pd.DataFrame(data, columns=["Stiercode", "Naam Stier", "Voorraad", "Status"])
+    df = pd.DataFrame(data, columns=["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"])
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Sheet1")
     output.seek(0)
     return output
 
 def display_and_download(title, data, filename):
-    df = pd.DataFrame(data, columns=["Stiercode", "Naam Stier", "Voorraad", "Status"])
+    df = pd.DataFrame(data, columns=["Stiercode", "Naam Stier", "Ras", "Voorraad", "Status"])
     st.write(f"## {title}")
     st.dataframe(df)
     st.download_button(f"Download {title}", save_to_excel(data), filename)
