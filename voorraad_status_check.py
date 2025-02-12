@@ -59,7 +59,7 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
 def save_to_excel(data):
     output = BytesIO()
     df = pd.DataFrame(data, columns=["Stiercode"])
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Sheet1")
     output.seek(0)
     return output
