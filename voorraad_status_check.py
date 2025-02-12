@@ -98,16 +98,15 @@ def main():
             if ras not in drempelwaarden:
                 drempelwaarden[ras] = overige_drempel
         
-        if st.button("Check voorraad"):
-            (beperkt_con, voldoende_con, toevoegen_con, 
-            beperkt_ges, voldoende_ges, toevoegen_ges) = determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden)
-            
-            display_and_download("Beperkte voorraad Conventioneel", beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx")
-            display_and_download("Voldoende voorraad Conventioneel", voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx")
-            display_and_download("Toevoegen website Conventioneel", toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx")
-            display_and_download("Beperkte voorraad Gesekst", beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx")
-            display_and_download("Voldoende voorraad Gesekst", voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx")
-            display_and_download("Toevoegen website Gesekst", toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx")
+        (beperkt_con, voldoende_con, toevoegen_con, 
+        beperkt_ges, voldoende_ges, toevoegen_ges) = determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden)
+        
+        display_and_download("Beperkte voorraad Conventioneel", beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx")
+        display_and_download("Voldoende voorraad Conventioneel", voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx")
+        display_and_download("Toevoegen website Conventioneel", toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx")
+        display_and_download("Beperkte voorraad Gesekst", beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx")
+        display_and_download("Voldoende voorraad Gesekst", voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx")
+        display_and_download("Toevoegen website Gesekst", toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx")
     
 if __name__ == "__main__":
     main()
