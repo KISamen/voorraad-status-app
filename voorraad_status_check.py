@@ -13,17 +13,19 @@ def load_data(uploaded_voorraden, uploaded_webshop):
         xls_voorraden = pd.ExcelFile(uploaded_voorraden)
         xls_webshop = pd.ExcelFile(uploaded_webshop)
 
-        # Sheet zoeken voor voorraadbestand
+        # Toon beschikbare sheets voor debug (optioneel)
+        # st.write("Voorraden sheets:", xls_voorraden.sheet_names)
+        # st.write("Webshop sheets:", xls_webshop.sheet_names)
+
         voorraad_sheet = find_sheet(xls_voorraden, ["Artikelen", "Blad1", "Sheet1"])
         if voorraad_sheet is None:
-            st.error(f"Geen geldige voorraad-sheet gevonden. Beschikbare sheets: {xls_voorraden.sheet_names}")
+            st.error(f"Sheet met voorraad niet gevonden. Beschikbare sheets: {xls_voorraden.sheet_names}")
             st.stop()
 
         df_voorraden = pd.read_excel(xls_voorraden, sheet_name=voorraad_sheet)
 
-        # Sheets voor webshopbestand
         if "Stieren" not in xls_webshop.sheet_names or "Artikelvariaties" not in xls_webshop.sheet_names:
-            st.error(f"Sheets 'Stieren' en/of 'Artikelvariaties' niet gevonden in webshopbestand. Beschikbare sheets: {xls_webshop.sheet_names}")
+            st.error(f"Sheets 'Stieren' of 'Artikelvariaties' ontbreken. Beschikbaar: {xls_webshop.sheet_names}")
             st.stop()
 
         df_stieren = pd.read_excel(xls_webshop, sheet_name="Stieren")
@@ -52,7 +54,6 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
         is_gesekst = "-S" in stiercode or "-M" in stiercode
 
         if not is_gesekst:
-            # Conventioneel
             status_row = df_stieren[df_stieren['Stiercode NL / KI code'].astype(str) == stiercode]
             if not status_row.empty:
                 status = status_row.iloc[0]['Status']
@@ -63,7 +64,6 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
             else:
                 toevoegen_conventioneel.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
         else:
-            # Gesekst
             artikel_row = df_artikelvariaties[df_artikelvariaties['Nummer'].astype(str) == stiercode]
             if not artikel_row.empty:
                 nederland_status = artikel_row.iloc[0]['Nederland']
@@ -110,7 +110,7 @@ def main():
 
         st.sidebar.header("Drempelwaarden per ras")
         for ras in ["Holstein zwartbont", "Red Holstein", "Belgisch Witblauw", "Jersey"]:
-            drempelwaarden[ras] = st.sidebar.number_input(f"Drempel voor {ras}", min_value=1, value=50)
+            drempelwaarden[ras] = st.sidebar.number_input(f"Drempel voor {ras}", min_value=1, value=drempelwaarden[ras])
         overige_drempel = st.sidebar.number_input("Drempel voor overige rassen", min_value=1, value=10)
 
         df_voorraden, df_stieren, df_artikelvariaties = load_data(uploaded_voorraden, uploaded_webshop)
