@@ -24,10 +24,10 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
     toevoegen_gesekst = []
     
     for _, row in df_voorraden.iterrows():
-        stiercode = str(row['Nr.'])
-        voorraad = row['Beschikbare voorraad']
-        ras = row['Rasomschrijving']
-        naam_stier = row['Omschrijving']
+        stiercode = str(row['Artikelnummer'])
+        voorraad = row['Aantal']
+        ras = row['Ras']
+        naam_stier = row['Artikelomschrijving']
         drempel = drempelwaarden.get(ras, 10)
         
         is_gesekst = "-S" in stiercode or "-M" in stiercode
@@ -93,7 +93,7 @@ def main():
         
         df_voorraden, df_stieren, df_artikelvariaties = load_data(uploaded_voorraden, uploaded_webshop)
         
-        unieke_rassen = df_voorraden['Rasomschrijving'].unique()
+        unieke_rassen = df_voorraden['Ras'].unique()
         for ras in unieke_rassen:
             if ras not in drempelwaarden:
                 drempelwaarden[ras] = overige_drempel
