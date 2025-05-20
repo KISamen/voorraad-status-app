@@ -3,35 +3,54 @@ import pandas as pd
 from io import BytesIO
 
 def load_data(uploaded_voorraden, uploaded_webshop):
+    def find_sheet(xls, mogelijke_namen):
+        for naam in mogelijke_namen:
+            if naam in xls.sheet_names:
+                return naam
+        return None
+
     if uploaded_voorraden is not None and uploaded_webshop is not None:
         xls_voorraden = pd.ExcelFile(uploaded_voorraden)
         xls_webshop = pd.ExcelFile(uploaded_webshop)
-        
-        df_voorraden = pd.read_excel(xls_voorraden, sheet_name="Blad1")
+
+        # Sheet zoeken voor voorraadbestand
+        voorraad_sheet = find_sheet(xls_voorraden, ["Artikelen", "Blad1", "Sheet1"])
+        if voorraad_sheet is None:
+            st.error(f"Geen geldige voorraad-sheet gevonden. Beschikbare sheets: {xls_voorraden.sheet_names}")
+            st.stop()
+
+        df_voorraden = pd.read_excel(xls_voorraden, sheet_name=voorraad_sheet)
+
+        # Sheets voor webshopbestand
+        if "Stieren" not in xls_webshop.sheet_names or "Artikelvariaties" not in xls_webshop.sheet_names:
+            st.error(f"Sheets 'Stieren' en/of 'Artikelvariaties' niet gevonden in webshopbestand. Beschikbare sheets: {xls_webshop.sheet_names}")
+            st.stop()
+
         df_stieren = pd.read_excel(xls_webshop, sheet_name="Stieren")
         df_artikelvariaties = pd.read_excel(xls_webshop, sheet_name="Artikelvariaties")
-        
+
         return df_voorraden, df_stieren, df_artikelvariaties
+
     return None, None, None
 
 def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden):
     beperkt_conventioneel = []
     voldoende_conventioneel = []
     toevoegen_conventioneel = []
-    
+
     beperkt_gesekst = []
     voldoende_gesekst = []
     toevoegen_gesekst = []
-    
+
     for _, row in df_voorraden.iterrows():
         stiercode = str(row['Artikelnummer'])
         voorraad = row['Aantal']
         ras = row['Ras']
         naam_stier = row['Artikelomschrijving']
         drempel = drempelwaarden.get(ras, 10)
-        
+
         is_gesekst = "-S" in stiercode or "-M" in stiercode
-        
+
         if not is_gesekst:
             # Conventioneel
             status_row = df_stieren[df_stieren['Stiercode NL / KI code'].astype(str) == stiercode]
@@ -55,8 +74,11 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
             else:
                 if voorraad > drempel:
                     toevoegen_gesekst.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
-    
-    return beperkt_conventioneel, voldoende_conventioneel, toevoegen_conventioneel, beperkt_gesekst, voldoende_gesekst, toevoegen_gesekst
+
+    return (
+        beperkt_conventioneel, voldoende_conventioneel, toevoegen_conventioneel,
+        beperkt_gesekst, voldoende_gesekst, toevoegen_gesekst
+    )
 
 def save_to_excel(data):
     output = BytesIO()
@@ -74,10 +96,10 @@ def display_and_download(title, data, filename):
 
 def main():
     st.title("Voorraad Checker")
-    
+
     uploaded_voorraden = st.file_uploader("Upload 'Beschikbare voorraad lablocaties.xlsx'", type=["xlsx"])
     uploaded_webshop = st.file_uploader("Upload 'Status Webshop.xlsx'", type=["xlsx"])
-    
+
     if uploaded_voorraden and uploaded_webshop:
         drempelwaarden = {
             "Holstein zwartbont": 50,
@@ -85,28 +107,29 @@ def main():
             "Belgisch Witblauw": 50,
             "Jersey": 50
         }
-        
+
         st.sidebar.header("Drempelwaarden per ras")
         for ras in ["Holstein zwartbont", "Red Holstein", "Belgisch Witblauw", "Jersey"]:
             drempelwaarden[ras] = st.sidebar.number_input(f"Drempel voor {ras}", min_value=1, value=50)
         overige_drempel = st.sidebar.number_input("Drempel voor overige rassen", min_value=1, value=10)
-        
+
         df_voorraden, df_stieren, df_artikelvariaties = load_data(uploaded_voorraden, uploaded_webshop)
-        
+
         unieke_rassen = df_voorraden['Ras'].unique()
         for ras in unieke_rassen:
             if ras not in drempelwaarden:
                 drempelwaarden[ras] = overige_drempel
-        
-        (beperkt_con, voldoende_con, toevoegen_con, 
-        beperkt_ges, voldoende_ges, toevoegen_ges) = determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden)
-        
+
+        (beperkt_con, voldoende_con, toevoegen_con,
+         beperkt_ges, voldoende_ges, toevoegen_ges) = determine_stock_status(
+            df_voorraden, df_stieren, df_artikelvariaties, drempelwaarden)
+
         display_and_download("Beperkte voorraad Conventioneel", beperkt_con, "Beperkte_Voorraad_Conventioneel.xlsx")
         display_and_download("Voldoende voorraad Conventioneel", voldoende_con, "Voldoende_Voorraad_Conventioneel.xlsx")
         display_and_download("Toevoegen website Conventioneel", toevoegen_con, "Toevoegen_Website_Conventioneel.xlsx")
         display_and_download("Beperkte voorraad Gesekst", beperkt_ges, "Beperkte_Voorraad_Gesekst.xlsx")
         display_and_download("Voldoende voorraad Gesekst", voldoende_ges, "Voldoende_Voorraad_Gesekst.xlsx")
         display_and_download("Toevoegen website Gesekst", toevoegen_ges, "Toevoegen_Website_Gesekst.xlsx")
-    
+
 if __name__ == "__main__":
     main()
