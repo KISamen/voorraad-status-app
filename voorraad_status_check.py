@@ -4,7 +4,7 @@ from io import BytesIO
 
 def load_data(uploaded_voorraden, uploaded_webshop):
     def find_sheet(xls, mogelijke_namen):
-        for naam in xls.sheet_names:
+        for naam in mogelijke_namen:
             if naam in xls.sheet_names:
                 return naam
         return None
@@ -47,13 +47,15 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
     voldoende_gesekst = []
     toevoegen_gesekst = []
 
+    # Snel kunnen controleren of een stiercode in de webshop staat
+    stieren_webshop_codes = set(df_stieren['Stiercode NL / KI code'].astype(str))
+
     for _, row in df_voorraden.iterrows():
         stiercode = str(row['Nr.'])
         ras = row['Ras omschrijving']
         naam_stier = row['Naam stier']
         drempel = drempelwaarden.get(ras, 10)
 
-        # Zorg dat voorraad altijd numeriek is
         try:
             voorraad = float(row['Voorraad'])
         except:
@@ -62,19 +64,18 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
         is_gesekst = "-S" in stiercode or "-M" in stiercode
 
         if not is_gesekst:
-            # Conventioneel
-            status_row = df_stieren[df_stieren['Stiercode NL / KI code'].astype(str) == stiercode]
-            if not status_row.empty:
-                status = status_row.iloc[0]['Status']
-                if voorraad < drempel and status == "ACTIVE":
-                    beperkt_conventioneel.append([stiercode, naam_stier, ras, voorraad, status])
-                elif voorraad > drempel and status == "ARCHIVE":
-                    voldoende_conventioneel.append([stiercode, naam_stier, ras, voorraad, status])
-            else:
+            if stiercode not in stieren_webshop_codes:
                 if voorraad > drempel:
                     toevoegen_conventioneel.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
+            else:
+                status_row = df_stieren[df_stieren['Stiercode NL / KI code'].astype(str) == stiercode]
+                if not status_row.empty:
+                    status = status_row.iloc[0]['Status']
+                    if voorraad < drempel and status == "ACTIVE":
+                        beperkt_conventioneel.append([stiercode, naam_stier, ras, voorraad, status])
+                    elif voorraad > drempel and status == "ARCHIVE":
+                        voldoende_conventioneel.append([stiercode, naam_stier, ras, voorraad, status])
         else:
-            # Gesekst
             artikel_row = df_artikelvariaties[df_artikelvariaties['Nummer'].astype(str) == stiercode]
             if not artikel_row.empty:
                 nederland_status = artikel_row.iloc[0]['Nederland']
