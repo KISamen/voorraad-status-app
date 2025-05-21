@@ -57,6 +57,7 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
         is_gesekst = "-S" in stiercode or "-M" in stiercode
 
         if not is_gesekst:
+            # Conventioneel
             status_row = df_stieren[df_stieren['Stiercode NL / KI code'].astype(str) == stiercode]
             if not status_row.empty:
                 status = status_row.iloc[0]['Status']
@@ -65,8 +66,10 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
                 elif voorraad > drempel and status == "ARCHIVE":
                     voldoende_conventioneel.append([stiercode, naam_stier, ras, voorraad, status])
             else:
-                toevoegen_conventioneel.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
+                if voorraad > drempel:
+                    toevoegen_conventioneel.append([stiercode, naam_stier, ras, voorraad, "Niet in webshop"])
         else:
+            # Gesekst
             artikel_row = df_artikelvariaties[df_artikelvariaties['Nummer'].astype(str) == stiercode]
             if not artikel_row.empty:
                 nederland_status = artikel_row.iloc[0]['Nederland']
