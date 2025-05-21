@@ -13,16 +13,19 @@ def load_data(uploaded_voorraden, uploaded_webshop):
         xls_voorraden = pd.ExcelFile(uploaded_voorraden)
         xls_webshop = pd.ExcelFile(uploaded_webshop)
 
-        # Toon beschikbare sheets voor debug (optioneel)
-        # st.write("Voorraden sheets:", xls_voorraden.sheet_names)
-        # st.write("Webshop sheets:", xls_webshop.sheet_names)
-
         voorraad_sheet = find_sheet(xls_voorraden, ["Artikelen", "Blad1", "Sheet1"])
         if voorraad_sheet is None:
             st.error(f"Sheet met voorraad niet gevonden. Beschikbare sheets: {xls_voorraden.sheet_names}")
             st.stop()
 
         df_voorraden = pd.read_excel(xls_voorraden, sheet_name=voorraad_sheet)
+
+        # Controle op vereiste kolommen
+        benodigde_kolommen = {'Nr.', 'Voorraad', 'Ras omschrijving', 'Naam stier'}
+        ontbrekend = benodigde_kolommen - set(df_voorraden.columns)
+        if ontbrekend:
+            st.error(f"Kolommen ontbreken in voorraadbestand: {ontbrekend}")
+            st.stop()
 
         if "Stieren" not in xls_webshop.sheet_names or "Artikelvariaties" not in xls_webshop.sheet_names:
             st.error(f"Sheets 'Stieren' of 'Artikelvariaties' ontbreken. Beschikbaar: {xls_webshop.sheet_names}")
@@ -45,10 +48,10 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
     toevoegen_gesekst = []
 
     for _, row in df_voorraden.iterrows():
-        stiercode = str(row['Artikelnummer'])
-        voorraad = row['Aantal']
-        ras = row['Ras']
-        naam_stier = row['Artikelomschrijving']
+        stiercode = str(row['Nr.'])
+        voorraad = row['Voorraad']
+        ras = row['Ras omschrijving']
+        naam_stier = row['Naam stier']
         drempel = drempelwaarden.get(ras, 10)
 
         is_gesekst = "-S" in stiercode or "-M" in stiercode
@@ -109,13 +112,13 @@ def main():
         }
 
         st.sidebar.header("Drempelwaarden per ras")
-        for ras in ["Holstein zwartbont", "Red Holstein", "Belgisch Witblauw", "Jersey"]:
+        for ras in drempelwaarden.keys():
             drempelwaarden[ras] = st.sidebar.number_input(f"Drempel voor {ras}", min_value=1, value=drempelwaarden[ras])
         overige_drempel = st.sidebar.number_input("Drempel voor overige rassen", min_value=1, value=10)
 
         df_voorraden, df_stieren, df_artikelvariaties = load_data(uploaded_voorraden, uploaded_webshop)
 
-        unieke_rassen = df_voorraden['Ras'].unique()
+        unieke_rassen = df_voorraden['Ras omschrijving'].unique()
         for ras in unieke_rassen:
             if ras not in drempelwaarden:
                 drempelwaarden[ras] = overige_drempel
