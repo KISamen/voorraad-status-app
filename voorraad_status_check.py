@@ -4,7 +4,7 @@ from io import BytesIO
 
 def load_data(uploaded_voorraden, uploaded_webshop):
     def find_sheet(xls, mogelijke_namen):
-        for naam in mogelijke_namen:
+        for naam in xls.sheet_names:
             if naam in xls.sheet_names:
                 return naam
         return None
@@ -49,10 +49,15 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
 
     for _, row in df_voorraden.iterrows():
         stiercode = str(row['Nr.'])
-        voorraad = row['Voorraad']
         ras = row['Ras omschrijving']
         naam_stier = row['Naam stier']
         drempel = drempelwaarden.get(ras, 10)
+
+        # Zorg dat voorraad altijd numeriek is
+        try:
+            voorraad = float(row['Voorraad'])
+        except:
+            voorraad = 0
 
         is_gesekst = "-S" in stiercode or "-M" in stiercode
 
