@@ -21,7 +21,7 @@ def load_data(uploaded_voorraden, uploaded_webshop):
         df_voorraden = pd.read_excel(xls_voorraden, sheet_name=voorraad_sheet)
 
         # Controle op vereiste kolommen
-        benodigde_kolommen = {'Nr.', 'Voorraad', 'Ras omschrijving', 'Naam stier'}
+        benodigde_kolommen = {'Nr.', 'Beschikbare voorraad', 'Ras omschrijving', 'Naam stier'}
         ontbrekend = benodigde_kolommen - set(df_voorraden.columns)
         if ontbrekend:
             st.error(f"Kolommen ontbreken in voorraadbestand: {ontbrekend}")
@@ -47,7 +47,6 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
     voldoende_gesekst = []
     toevoegen_gesekst = []
 
-    # Snel kunnen controleren of een stiercode in de webshop staat
     stieren_webshop_codes = set(df_stieren['Stiercode NL / KI code'].astype(str))
 
     for _, row in df_voorraden.iterrows():
@@ -57,7 +56,7 @@ def determine_stock_status(df_voorraden, df_stieren, df_artikelvariaties, drempe
         drempel = drempelwaarden.get(ras, 10)
 
         try:
-            voorraad = float(row['Voorraad'])
+            voorraad = float(row['Beschikbare voorraad'])
         except:
             voorraad = 0
 
